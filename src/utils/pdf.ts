@@ -61,24 +61,12 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
       doc.setTextColor(0, 0, 0);
     };
 
-    // Helper function to add table header
-    const addTableHeader = (columns: { text: string; width: number }[]) => {
-      checkPageBreak(10);
-      doc.setFillColor(0, 35, 102);
-      doc.rect(margin, yPos, contentWidth, 8, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      
-      let xOffset = margin + 2;
-      columns.forEach(col => {
-        doc.text(col.text, xOffset, yPos + 5);
-        xOffset += col.width;
-      });
-      
-      yPos += 8;
-      doc.setTextColor(0, 0, 0);
-      doc.setFont('helvetica', 'normal');
+    // Helper function to draw table row background
+    const drawRowBackground = (rowIndex: number) => {
+      if (rowIndex % 2 === 0) {
+        doc.setFillColor(248, 246, 241);
+        doc.rect(margin, yPos, contentWidth, 7, 'F');
+      }
     };
 
     // ===== PAGE 1: HEADER =====
@@ -149,13 +137,24 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
     // ===== CRITERIA PERFORMANCE =====
     addSectionHeader('Criteria Performance Breakdown');
     
-    // Table columns: Criterion (100mm), Average (30mm), Rating (40mm)
-    const colWidths = [100, 30, 40];
-    addTableHeader([
-      { text: 'Criterion / Sub-question', width: colWidths[0] },
-      { text: 'Average', width: colWidths[1] },
-      { text: 'Rating', width: colWidths[2] }
-    ]);
+    // Define column positions for consistent alignment
+    const col1Start = margin;
+    const col2Start = margin + 120;
+    const col3Start = margin + 145;
+    
+    // Table header
+    checkPageBreak(10);
+    doc.setFillColor(0, 35, 102);
+    doc.rect(margin, yPos, contentWidth, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Criterion / Sub-question', col1Start + 2, yPos + 5);
+    doc.text('Average', col2Start + 2, yPos + 5);
+    doc.text('Rating', col3Start + 2, yPos + 5);
+    yPos += 8;
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
 
     // Add criteria and sub-questions
     criteria.forEach((crit) => {
@@ -171,17 +170,21 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
       
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
-      const critNameLines = doc.splitTextToSize(crit.name, colWidths[0] - 4);
-      doc.text(critNameLines[0], margin + 2, yPos + 4);
       
-      doc.text(critAvg.toFixed(2), margin + colWidths[0] + 2, yPos + 4);
+      // Split criterion name if too long
+      const critNameLines = doc.splitTextToSize(crit.name, 115);
+      doc.text(critNameLines[0], col1Start + 2, yPos + 4);
       
+      // Average score
+      doc.text(critAvg.toFixed(2), col2Start + 2, yPos + 4);
+      
+      // Rating with color
       if (critAvg >= BENCHMARK) {
         doc.setTextColor(46, 139, 87);
       } else {
         doc.setTextColor(196, 30, 58);
       }
-      doc.text(rating, margin + colWidths[0] + colWidths[1] + 2, yPos + 4);
+      doc.text(rating, col3Start + 2, yPos + 4);
       doc.setTextColor(0, 0, 0);
       
       yPos += 7;
@@ -193,7 +196,7 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
         const sqRating = sqAvg >= 4.5 ? 'Excellent' : sqAvg >= BENCHMARK ? 'Good' : sqAvg >= 2 ? 'Needs Improvement' : 'Critical';
         
         // Split text into lines
-        const sqTextLines = doc.splitTextToSize(sq.text, colWidths[0] - 8);
+        const sqTextLines = doc.splitTextToSize(sq.text, 110);
         const rowHeight = Math.max(6, sqTextLines.length * 4 + 2);
         
         // Check if we need a new page
@@ -206,23 +209,23 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
         let textY = yPos + 3;
         sqTextLines.forEach((line: string, lineIdx: number) => {
           if (lineIdx === 0) {
-            doc.text('→ ' + line, margin + 6, textY);
+            doc.text('→ ' + line, col1Start + 6, textY);
           } else {
-            doc.text('  ' + line, margin + 6, textY);
+            doc.text('  ' + line, col1Start + 6, textY);
           }
           textY += 4;
         });
         
-        // Average score
-        doc.text(sqAvg.toFixed(2), margin + colWidths[0] + 2, yPos + rowHeight / 2);
+        // Average score - vertically centered
+        doc.text(sqAvg.toFixed(2), col2Start + 2, yPos + rowHeight / 2);
         
-        // Rating with color
+        // Rating with color - vertically centered
         if (sqAvg >= BENCHMARK) {
           doc.setTextColor(46, 139, 87);
         } else {
           doc.setTextColor(196, 30, 58);
         }
-        doc.text(sqRating, margin + colWidths[0] + colWidths[1] + 2, yPos + rowHeight / 2);
+        doc.text(sqRating, col3Start + 2, yPos + rowHeight / 2);
         doc.setTextColor(0, 0, 0);
         
         yPos += rowHeight;
@@ -233,27 +236,39 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
     yPos += 5;
     addSectionHeader('Course Performance');
     
-    const courseColWidths = [60, 50, 60];
-    addTableHeader([
-      { text: 'Course', width: courseColWidths[0] },
-      { text: 'Submissions', width: courseColWidths[1] },
-      { text: 'Average', width: courseColWidths[2] }
-    ]);
+    // Define column positions for course table
+    const courseCol1Start = margin;
+    const courseCol2Start = margin + 80;
+    const courseCol3Start = margin + 130;
+    
+    // Table header
+    checkPageBreak(10);
+    doc.setFillColor(0, 35, 102);
+    doc.rect(margin, yPos, contentWidth, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Course', courseCol1Start + 2, yPos + 5);
+    doc.text('Submissions', courseCol2Start + 2, yPos + 5);
+    doc.text('Average', courseCol3Start + 2, yPos + 5);
+    yPos += 8;
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
 
     Object.entries(metrics.courseBreakdown).forEach(([course, data]) => {
       checkPageBreak(7);
       
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text(course, margin + 2, yPos + 4);
-      doc.text(data.count.toString(), margin + courseColWidths[0] + 2, yPos + 4);
+      doc.text(course, courseCol1Start + 2, yPos + 4);
+      doc.text(data.count.toString(), courseCol2Start + 2, yPos + 4);
       
       if (data.average >= BENCHMARK) {
         doc.setTextColor(46, 139, 87);
       } else {
         doc.setTextColor(196, 30, 58);
       }
-      doc.text(data.average.toFixed(2), margin + courseColWidths[0] + courseColWidths[1] + 2, yPos + 4);
+      doc.text(data.average.toFixed(2), courseCol3Start + 2, yPos + 4);
       doc.setTextColor(0, 0, 0);
       
       yPos += 7;
