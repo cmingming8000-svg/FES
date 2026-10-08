@@ -9,9 +9,13 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
   const activeCycle = store.getActiveCycle();
   const effectiveCycleId = cycleId || activeCycle?.id;
   const cycle = allCycles.find(c => c.id === effectiveCycleId);
-  const metrics = store.getFacultyMetrics(facultyId, effectiveCycleId);
+  
+  // Fetch current criteria and sub-questions FIRST
   const criteria = store.getCriteria();
   const subQuestions = store.getSubQuestions();
+  
+  // Then calculate metrics based on current criteria
+  const metrics = store.getFacultyMetrics(facultyId, effectiveCycleId);
 
   if (!metrics || metrics.totalSubmissions === 0) { alert('No evaluation data available for this period'); return; }
 
@@ -66,6 +70,12 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
       try { doc.addImage(faculty.signature, 'PNG', margin, yPos, 80, 30); yPos += 35; } catch (e) { yPos += 5; }
     }
 
+    doc.setFontSize(16); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 35, 102);
+    doc.text('Current Evaluation Criteria Structure', margin, yPos); yPos += 8;
+    doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 100, 100);
+    doc.text(`This report reflects ${criteria.length} criteria and ${subQuestions.length} sub-questions as of ${generationTimestamp}`, margin, yPos);
+    yPos += 10;
+    
     doc.setFontSize(16); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 35, 102);
     doc.text('Criteria Performance Breakdown', margin, yPos); yPos += 10;
     doc.setFillColor(0, 35, 102); doc.rect(margin, yPos, pageWidth - 2 * margin, 8, 'F');

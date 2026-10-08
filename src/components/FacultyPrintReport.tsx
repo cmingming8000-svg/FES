@@ -17,6 +17,7 @@ export default function FacultyPrintReport({ facultyId, metrics, criteria, subQu
     header: { borderBottom: '3px solid #002366', paddingBottom: '20px', marginBottom: '30px' },
     title: { fontSize: '28pt', fontWeight: 'bold', color: '#002366', margin: '0 0 8px 0', fontFamily: 'Georgia, serif' },
     subtitle: { fontSize: '14pt', color: '#B87333', margin: '0', fontStyle: 'italic' },
+    criteriaNote: { fontSize: '10pt', color: '#666666', fontStyle: 'italic', margin: '10px 0', padding: '8px', backgroundColor: '#F8F6F1', borderLeft: '3px solid #B87333' },
     section: { marginBottom: '30px', breakInside: 'avoid' as any },
     sectionTitle: { fontSize: '16pt', fontWeight: 'bold', color: '#002366', borderBottom: '2px solid #B87333', paddingBottom: '8px', marginBottom: '15px' },
     table: { width: '100%', borderCollapse: 'collapse' as const, marginBottom: '15px', fontSize: '11pt' },
@@ -36,6 +37,9 @@ export default function FacultyPrintReport({ facultyId, metrics, criteria, subQu
           <div><h1 style={styles.title}>Faculty Evaluation Report</h1><p style={styles.subtitle}>Faculty Evaluation System</p></div>
           <div style={{ textAlign: 'right' }}><p style={{ margin: 0, fontSize: '10pt', color: '#6B7280' }}>Report Generated</p><p style={{ margin: '4px 0 0 0', fontSize: '12pt', fontWeight: 'bold', color: '#002366' }}>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p></div>
         </div>
+      </div>
+      <div style={styles.criteriaNote}>
+        <strong>Current Evaluation Criteria:</strong> This report reflects {criteria.length} criteria and {subQuestions.length} sub-questions as of {generationTimestamp}. Metrics are calculated based on the available evaluation data for the current criteria structure.
       </div>
       <div style={styles.section}><h2 style={styles.sectionTitle}>Faculty Information</h2><table style={styles.table}><tbody><tr><th style={{ ...styles.th, width: '30%' }}>Faculty Name</th><td style={styles.td}>{faculty.name}</td></tr><tr><th style={styles.th}>Department</th><td style={styles.td}>{faculty.department}</td></tr><tr><th style={styles.th}>Title</th><td style={styles.td}>{faculty.title}</td></tr><tr><th style={styles.th}>Evaluation Period</th><td style={styles.td}>{cycleName}</td></tr></tbody></table></div>
       <div style={styles.section}><h2 style={styles.sectionTitle}>Performance Summary</h2><div style={{ marginBottom: '20px' }}><div style={styles.metricBox}><div style={styles.metricLabel}>Total Submissions</div><div style={styles.metricValue}>{metrics.totalSubmissions}</div></div><div style={styles.metricBox}><div style={styles.metricLabel}>Overall Average</div><div style={styles.metricValue}>{metrics.overallAverage.toFixed(2)}</div></div><div style={styles.metricBox}><div style={styles.metricLabel}>Department Average</div><div style={styles.metricValue}>{deptMetrics.institutionAverage.toFixed(2)}</div></div></div></div>

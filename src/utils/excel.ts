@@ -9,9 +9,13 @@ export async function exportFacultyReport(facultyId: string, cycleId?: string): 
   const activeCycle = store.getActiveCycle();
   const effectiveCycleId = cycleId || activeCycle?.id;
   const cycle = allCycles.find(c => c.id === effectiveCycleId);
-  const metrics = store.getFacultyMetrics(facultyId, effectiveCycleId);
+  
+  // Fetch current criteria and sub-questions FIRST
   const criteria = store.getCriteria();
   const subQuestions = store.getSubQuestions();
+  
+  // Then calculate metrics based on current criteria
+  const metrics = store.getFacultyMetrics(facultyId, effectiveCycleId);
 
   try {
     if (!faculty) throw new Error('Faculty not found');
@@ -67,10 +71,15 @@ export async function exportFacultyReport(facultyId: string, cycleId?: string): 
 
     const criteriaSheet = workbook.addWorksheet('Criteria Analysis');
     criteriaSheet.columns = [{ width: 50 }, { width: 15 }, { width: 15 }, { width: 20 }];
-    criteriaSheet.getRow(1).values = ['Criterion / Sub-Question', 'Type', 'Avg Score', 'Rating'];
-    criteriaSheet.getRow(1).eachCell(cell => { cell.fill = headerFill; cell.font = headerFont; cell.border = borderStyle; });
+    
+    // Add criteria structure note
+    criteriaSheet.getRow(1).values = [`Current Criteria Structure: ${criteria.length} criteria, ${subQuestions.length} sub-questions (as of ${generationTimestamp})`, '', '', ''];
+    criteriaSheet.getRow(1).font = { italic: true, size: 9, color: { argb: 'FF666666' } };
+    
+    criteriaSheet.getRow(2).values = ['Criterion / Sub-Question', 'Type', 'Avg Score', 'Rating'];
+    criteriaSheet.getRow(2).eachCell(cell => { cell.fill = headerFill; cell.font = headerFont; cell.border = borderStyle; });
 
-    let rowNum = 2;
+    let rowNum = 3;
     criteria.forEach(crit => {
       const critAvg = metrics.criteriaAverages[crit.id] || 0;
       const rating = critAvg >= 4.5 ? 'Excellent' : critAvg >= BENCHMARK ? 'Good' : critAvg >= 2 ? 'Needs Improvement' : 'Critical';
