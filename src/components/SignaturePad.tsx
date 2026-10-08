@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Eraser, Undo } from 'lucide-react';
 
 interface SignaturePadProps {
@@ -13,6 +13,15 @@ export default function SignaturePad({ onSignatureChange, width = 400, height = 
   const [history, setHistory] = useState<ImageData[]>([]);
   const [hasSignature, setHasSignature] = useState(false);
 
+  const saveState = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    setHistory(prev => [...prev.slice(-10), imageData]);
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -23,16 +32,7 @@ export default function SignaturePad({ onSignatureChange, width = 400, height = 
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     saveState();
-  }, []);
-
-  const saveState = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    setHistory(prev => [...prev.slice(-10), imageData]);
-  };
+  }, [saveState]);
 
   const getCoords = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current;

@@ -21,9 +21,18 @@ function DashboardWithLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [viewingCycleId, setViewingCycleId] = useState<string>('');
   const showFilter = user?.role !== 'student';
+  
+  // Safely clone element with props if it's a valid React element
+  const enhancedChildren = React.isValidElement(children) 
+    ? React.cloneElement(children as React.ReactElement<any>, { 
+        viewingCycleId, 
+        onViewingCycleChange: setViewingCycleId 
+      }) 
+    : children;
+  
   return (
     <Layout viewingCycleId={viewingCycleId} onViewingCycleChange={showFilter ? setViewingCycleId : undefined}>
-      {React.isValidElement(children) ? React.cloneElement(children as React.ReactElement<any>, { viewingCycleId, onViewingCycleChange: setViewingCycleId }) : children}
+      {enhancedChildren}
     </Layout>
   );
 }
