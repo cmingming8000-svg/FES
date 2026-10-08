@@ -49,7 +49,7 @@ function applyAlternatingRows(sheet: ExcelJS.Worksheet, startRow: number, endRow
   }
 }
 
-export async function exportFacultyReport(facultyId: string, cycleId?: string, includeStudentIds: boolean = false): Promise<void> {
+export async function exportFacultyReport(facultyId: string, cycleId?: string): Promise<void> {
   const faculty = store.getFacultyById(facultyId);
   if (!faculty) return;
 
@@ -61,9 +61,6 @@ export async function exportFacultyReport(facultyId: string, cycleId?: string, i
   const criteria = store.getCriteria();
   const subQuestions = store.getSubQuestions();
   const metrics = store.getFacultyMetrics(facultyId, effectiveCycleId);
-  
-  // Get evaluations with student IDs if admin
-  const evaluations = includeStudentIds ? store.getEvaluationsForFaculty(facultyId, effectiveCycleId) : [];
 
   try {
     if (!faculty) throw new Error('Faculty not found');
@@ -180,7 +177,7 @@ export async function exportFacultyReport(facultyId: string, cycleId?: string, i
     row++;
 
     const benchmarkRows: [string, string | number, string?][] = [
-      ['Your Average', metrics.overallAverage.toFixed(2)],
+      ['Faculty Average', metrics.overallAverage.toFixed(2)],
       ['Department Average', deptMetrics.institutionAverage.toFixed(2)],
       ['Difference', (metrics.overallAverage - deptMetrics.institutionAverage).toFixed(2), metrics.overallAverage >= deptMetrics.institutionAverage ? GREEN : RED],
     ];
@@ -314,58 +311,6 @@ export async function exportFacultyReport(facultyId: string, cycleId?: string, i
     // ============================
     // SHEET 4: STUDENT FEEDBACK
     // ============================
-    // ===== EVALUATION DETAILS (Admin Only) =====
-    if (includeStudentIds && evaluations.length > 0) {
-      const evalSheet = workbook.addWorksheet('Evaluation Details');
-      evalSheet.columns = [
-        { width: 15 },  // Student ID
-        { width: 20 },  // Student Name
-        { width: 15 },  // Program
-        { width: 15 },  // Course
-        { width: 12 },  // Avg Rating
-        { width: 18 },  // Date
-        { width: 60 },  // Feedback
-      ];
-
-      evalSheet.views = [{ state: 'frozen', ySplit: 1 }];
-
-      const evalHeaders = ['Student ID', 'Student Name', 'Program', 'Course', 'Avg Rating', 'Date', 'Feedback'];
-      evalSheet.getRow(1).values = evalHeaders;
-      evalSheet.getRow(1).eachCell(cell => {
-        cell.fill = headerFill;
-        cell.font = headerFont;
-        cell.border = borderStyle;
-        cell.alignment = { vertical: 'middle', horizontal: 'center' };
-      });
-
-      evaluations.forEach((ev, i) => {
-        const student = store.getStudentById(ev.studentId || '');
-        const avgRating = Object.values(ev.ratings).reduce((a, b) => a + b, 0) / Object.values(ev.ratings).length;
-        const r = evalSheet.getRow(i + 2);
-        r.values = [
-          ev.studentId || 'Unknown',
-          student?.name || 'Unknown',
-          student?.programId || 'Unknown',
-          ev.courseId,
-          avgRating.toFixed(2),
-          new Date(ev.submittedAt).toLocaleDateString(),
-          ev.feedback || '',
-        ];
-        r.eachCell(cell => {
-          cell.border = borderStyle;
-          cell.font = { size: 10 };
-        });
-        r.getCell(5).alignment = { horizontal: 'center' };
-        r.getCell(5).font = { size: 10, bold: true, color: { argb: avgRating >= BENCHMARK ? GREEN : RED } };
-        r.getCell(6).alignment = { horizontal: 'center' };
-        r.getCell(7).alignment = { wrapText: true, vertical: 'top' };
-        r.height = 30;
-      });
-
-      applyAlternatingRows(evalSheet, 2, evaluations.length + 1);
-      evalSheet.autoFilter = { from: 'A1', to: `G${evaluations.length + 1}` };
-    }
-
     const feedbackSheet = workbook.addWorksheet('Student Feedback');
     feedbackSheet.columns = [
       { width: 16 },  // Course

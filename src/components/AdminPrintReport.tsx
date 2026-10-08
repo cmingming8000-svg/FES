@@ -57,52 +57,7 @@ export default function AdminPrintReport({ cycleName, criteria }: AdminPrintRepo
       </div>
       <div style={styles.section}><h2 style={styles.sectionTitle}>System Overview</h2><table style={styles.table}><tbody><tr><th style={{ ...styles.th, width: '40%' }}>Evaluation Period</th><td style={styles.td}>{cycleName}</td></tr><tr><th style={styles.th}>Total Faculty</th><td style={styles.td}>{faculty.length}</td></tr><tr><th style={styles.th}>Total Evaluations</th><td style={styles.td}>{totalEvaluations}</td></tr></tbody></table></div>
       <div style={styles.section}><h2 style={styles.sectionTitle}>Department Summary</h2><table style={styles.table}><thead><tr><th style={styles.th}>Department</th><th style={{ ...styles.th, width: '15%', textAlign: 'center' }}>Faculty</th><th style={{ ...styles.th, width: '20%', textAlign: 'center' }}>Submissions</th><th style={{ ...styles.th, width: '20%', textAlign: 'center' }}>Average</th></tr></thead><tbody>{deptData.map((dept, i) => (<tr key={i} style={{ backgroundColor: i % 2 === 0 ? '#F8F6F1' : 'white' }}><td style={styles.td}>{dept.name}</td><td style={{ ...styles.td, textAlign: 'center' }}>{dept.faculty}</td><td style={{ ...styles.td, textAlign: 'center' }}>{dept.submissions}</td><td style={{ ...styles.td, textAlign: 'center', fontWeight: 'bold', color: dept.average >= BENCHMARK ? '#2E8B57' : '#C41E3A' }}>{dept.average.toFixed(2)}</td></tr>))}</tbody></table></div>
-      
-      {/* Evaluation Details with Student IDs (Admin Only) */}
-      <div style={{ ...styles.section, pageBreakBefore: 'always' as any }}>
-        <h2 style={styles.sectionTitle}>Evaluation Details (Admin View — Student IDs Visible)</h2>
-        <p style={{ fontSize: '9pt', color: '#6B7280', marginBottom: '10px' }}>This section contains identifiable student information. Access restricted to administrators.</p>
-        {faculty.map(f => {
-          const evals = store.getEvaluationsForFaculty(f.id, cycleId);
-          if (evals.length === 0) return null;
-          return (
-            <div key={f.id} style={{ marginBottom: '20px' }}>
-              <h3 style={{ fontSize: '12pt', fontWeight: 'bold', color: '#002366', marginBottom: '8px' }}>{f.name} ({f.department})</h3>
-              <table style={{ ...styles.table, fontSize: '9pt' }}>
-                <thead>
-                  <tr>
-                    <th style={{ ...styles.th, width: '15%' }}>Student ID</th>
-                    <th style={{ ...styles.th, width: '20%' }}>Student Name</th>
-                    <th style={{ ...styles.th, width: '15%' }}>Program</th>
-                    <th style={{ ...styles.th, width: '12%' }}>Course</th>
-                    <th style={{ ...styles.th, width: '12%', textAlign: 'center' }}>Avg Rating</th>
-                    <th style={{ ...styles.th, width: '15%' }}>Date</th>
-                    <th style={styles.th}>Feedback</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {evals.map((ev, i) => {
-                    const student = store.getStudentById(ev.studentId || '');
-                    const avgRating = Object.values(ev.ratings).reduce((a, b) => a + b, 0) / Object.values(ev.ratings).length;
-                    return (
-                      <tr key={i} style={{ backgroundColor: i % 2 === 0 ? '#F8F6F1' : 'white' }}>
-                        <td style={styles.td}>{ev.studentId || 'Unknown'}</td>
-                        <td style={styles.td}>{student?.name || 'Unknown'}</td>
-                        <td style={styles.td}>{student?.programId || 'Unknown'}</td>
-                        <td style={styles.td}>{ev.courseId}</td>
-                        <td style={{ ...styles.td, textAlign: 'center', fontWeight: 'bold', color: avgRating >= BENCHMARK ? '#2E8B57' : '#C41E3A' }}>{avgRating.toFixed(2)}</td>
-                        <td style={styles.td}>{new Date(ev.submittedAt).toLocaleDateString()}</td>
-                        <td style={{ ...styles.td, fontSize: '8pt', fontStyle: 'italic' }}>{ev.feedback || '—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          );
-        })}
-      </div>
-      
+
       <div style={styles.footer}><p>Faculty Evaluation System (FES) • Confidential • Admin Access Only</p></div>
     </div>
   );
