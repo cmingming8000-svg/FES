@@ -40,8 +40,8 @@ export default function Login() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl mb-4" style={{ background: 'linear-gradient(135deg, #002366, #003399)', border: '3px solid #B87333' }}>
             <span className="text-4xl font-bold" style={{ fontFamily: 'Georgia, serif', color: '#B87333' }}>W</span>
           </div>
-          <h1 className="text-2xl font-bold" style={{ color: '#002366' }}>AFES</h1>
-          <p className="text-sm" style={{ color: '#1A1A1A' }}>Anonymous Faculty Evaluation System</p>
+          <h1 className="text-2xl font-bold" style={{ color: '#002366' }}>FES</h1>
+          <p className="text-sm" style={{ color: '#1A1A1A' }}>Faculty Evaluation System</p>
         </div>
         <div className="rounded-xl shadow-lg p-8" style={{ backgroundColor: '#EDEBE8' }}>
           <div className="flex items-center gap-2 mb-6"><Shield size={20} style={{ color: '#B87333' }} /><h2 className="text-lg font-semibold" style={{ color: '#002366' }}>Secure Login</h2></div>

@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { User, Faculty, Student, Dean, EvaluationCycle, Criterion, SubQuestion, Evaluation, AuditLogEntry, RateLimitEntry, FacultyMetrics, EventType, TrainingRecommendation, Dispute, Program, Subject } from './types';
+import type { User, Faculty, Student, Dean, EvaluationCycle, Criterion, SubQuestion, Evaluation, AuditLogEntry, RateLimitEntry, FacultyMetrics, EventType, TrainingRecommendation, Dispute, Program, Subject, AdminRelease, DeanRelease } from './types';
 import { saveToLocalStorage, loadFromLocalStorage } from './utils/persistence';
 
 const BENCHMARK = 3.0;
@@ -441,6 +441,58 @@ class DataStore {
     this.emit('cycle_changed');
   }
 
+  // Three-Tier Release Pipeline Methods
+  async adminReleaseCycle(cycleId: string, adminId: string, signature: string): Promise<void> {
+    await this.simulateLatency();
+    const cycle = this.cycles.find(c => c.id === cycleId);
+    if (!cycle) throw new Error('Cycle not found');
+    cycle.adminRelease = {
+      released: true,
+      signature,
+      releasedAt: new Date().toISOString(),
+      releasedBy: adminId,
+    };
+    this.addAuditLog(`admin:${adminId}`, 'admin_release', cycleId, `Admin released cycle "${cycle.displayName}" with e-signature`);
+    this.persistData();
+    this.emit('cycle_changed');
+  }
+
+  async deanReleaseCycle(cycleId: string, department: string, deanId: string, signature: string): Promise<void> {
+    await this.simulateLatency();
+    const cycle = this.cycles.find(c => c.id === cycleId);
+    if (!cycle) throw new Error('Cycle not found');
+    if (!cycle.deanReleases) cycle.deanReleases = {};
+    cycle.deanReleases[department] = {
+      released: true,
+      signature,
+      releasedAt: new Date().toISOString(),
+      releasedBy: deanId,
+    };
+    this.addAuditLog(`dean:${deanId}`, 'dean_release', cycleId, `Dean released department "${department}" for cycle "${cycle.displayName}"`);
+    this.persistData();
+    this.emit('cycle_changed');
+  }
+
+  isCycleAdminReleased(cycleId?: string): boolean {
+    const cycle = this.cycles.find(c => c.id === (cycleId || this.getActiveCycle()?.id));
+    return cycle?.adminRelease?.released === true;
+  }
+
+  isCycleDeanReleased(cycleId: string | undefined, department: string): boolean {
+    const cycle = this.cycles.find(c => c.id === (cycleId || this.getActiveCycle()?.id));
+    return cycle?.deanReleases?.[department]?.released === true;
+  }
+
+  getCycleAdminRelease(cycleId?: string): AdminRelease | undefined {
+    const cycle = this.cycles.find(c => c.id === (cycleId || this.getActiveCycle()?.id));
+    return cycle?.adminRelease;
+  }
+
+  getCycleDeanRelease(cycleId: string | undefined, department: string): DeanRelease | undefined {
+    const cycle = this.cycles.find(c => c.id === (cycleId || this.getActiveCycle()?.id));
+    return cycle?.deanReleases?.[department];
+  }
+
   getCriteria(): Criterion[] { return [...this.criteria].sort((a, b) => a.order - b.order); }
   getSubQuestions(): SubQuestion[] { return [...this.subQuestions].sort((a, b) => a.order - b.order); }
   getSubQuestionsForCriterion(criterionId: string): SubQuestion[] { return this.subQuestions.filter(sq => sq.criterionId === criterionId).sort((a, b) => a.order - b.order); }
@@ -528,7 +580,7 @@ class DataStore {
 
   async submitEvaluation(evalData: Omit<Evaluation, 'id' | 'submittedAt'>, studentId?: string): Promise<Evaluation> {
     await this.simulateLatency();
-    const evaluation: Evaluation = { ...evalData, id: uuidv4(), submittedAt: new Date().toISOString() };
+    const evaluation: Evaluation = { ...evalData, id: uuidv4(), submittedAt: new Date().toISOString(), studentId: studentId || undefined };
     this.evaluations.push(evaluation);
     if (studentId) {
       if (!this.studentSessionEvals.has(studentId)) this.studentSessionEvals.set(studentId, new Set());

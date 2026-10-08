@@ -15,7 +15,7 @@ export async function exportDeanReport(department: string, cycleId?: string): Pr
     if (deptMetrics.totalSubmissions === 0) throw new Error('No evaluation data available');
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'AFES';
+    workbook.creator = 'FES';
     workbook.created = new Date();
 
     const headerFill: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002366' } };
@@ -24,7 +24,7 @@ export async function exportDeanReport(department: string, cycleId?: string): Pr
 
     const overviewSheet = workbook.addWorksheet('Department Overview');
     overviewSheet.columns = [{ width: 30 }, { width: 40 }];
-    overviewSheet.getRow(1).values = ['AFES Department Report', ''];
+    overviewSheet.getRow(1).values = ['FES Department Report', ''];
     overviewSheet.getRow(1).font = { bold: true, size: 16, color: { argb: 'FF002366' } };
     overviewSheet.getRow(3).values = ['Department', department];
     overviewSheet.getRow(4).values = ['Evaluation Period', cycle?.displayName || 'N/A'];
@@ -70,7 +70,7 @@ export async function exportDeanReport(department: string, cycleId?: string): Pr
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `AFES_${department.replace(/\s+/g, '_')}_Department_Report_${cycle?.displayName.replace(/[^a-zA-Z0-9]/g, '_') || 'report'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    link.download = `FES_${department.replace(/\s+/g, '_')}_Department_Report_${cycle?.displayName.replace(/[^a-zA-Z0-9]/g, '_') || 'report'}_${new Date().toISOString().split('T')[0]}.xlsx`;
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();

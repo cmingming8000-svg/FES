@@ -79,7 +79,7 @@ export default function Layout({ children, viewingCycleId, onViewingCycleChange 
               <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #002366, #003399)', border: '2px solid #B87333' }}>
                 <span className="text-lg font-bold" style={{ fontFamily: 'Georgia, serif', color: '#B87333' }}>W</span>
               </div>
-              <div><h1 className="text-white font-bold text-base leading-tight">AFES</h1><p className="text-[10px] leading-tight" style={{ color: '#B87333' }}>Faculty Evaluation System</p></div>
+              <div><h1 className="text-white font-bold text-base leading-tight">FES</h1><p className="text-[10px] leading-tight" style={{ color: '#B87333' }}>Faculty Evaluation System</p></div>
             </div>
             {activeCycle && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ backgroundColor: 'rgba(46,139,87,0.2)', border: '1px solid rgba(46,139,87,0.5)' }}>
@@ -139,7 +139,7 @@ export default function Layout({ children, viewingCycleId, onViewingCycleChange 
         </div>
       )}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">{children}</main>
-      <footer className="py-4 text-center text-xs" style={{ backgroundColor: '#1A1A1A', color: '#9CA3AF' }}><p>AFES © 2026 — Anonymous Faculty Evaluation System. All submissions are anonymized.</p></footer>
+      <footer className="py-4 text-center text-xs" style={{ backgroundColor: '#1A1A1A', color: '#9CA3AF' }}><p>FES © 2026 — Faculty Evaluation System. All submissions are anonymized.</p></footer>
     </div>
   );
 }

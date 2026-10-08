@@ -20,7 +20,7 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 20;
     let yPos = margin;
-    const trackingId = `AFES-${Date.now()}-${facultyId}`;
+    const trackingId = `FES-${Date.now()}-${facultyId}`;
     const generationTimestamp = new Date().toLocaleString();
 
     doc.setFillColor(0, 35, 102);
@@ -31,7 +31,7 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
     doc.text('FACULTY EVALUATION REPORT', margin, 20);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text('Anonymous Faculty Evaluation System', margin, 30);
+    doc.text('Faculty Evaluation System', margin, 30);
     yPos = 50;
     doc.setTextColor(0, 0, 0);
 
@@ -111,7 +111,7 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
       doc.text(data.average.toFixed(2), margin + 120, yPos + 5); doc.setTextColor(0, 0, 0); yPos += 7;
     });
 
-    const fileName = `AFES_${faculty.name.replace(/[^a-zA-Z0-9]/g, '_')}_${cycle?.displayName.replace(/[^a-zA-Z0-9]/g, '_') || 'report'}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const fileName = `FES_${faculty.name.replace(/[^a-zA-Z0-9]/g, '_')}_${cycle?.displayName.replace(/[^a-zA-Z0-9]/g, '_') || 'report'}_${new Date().toISOString().split('T')[0]}.pdf`;
     doc.save(fileName);
   } catch (error) {
     console.error('Error generating PDF report:', error);

@@ -18,7 +18,7 @@ export async function exportFacultyReport(facultyId: string, cycleId?: string): 
     if (!metrics || metrics.totalSubmissions === 0) throw new Error('No evaluation data available');
 
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'AFES';
+    workbook.creator = 'FES';
     workbook.created = new Date();
 
     const headerFill: ExcelJS.Fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF002366' } };
@@ -27,12 +27,12 @@ export async function exportFacultyReport(facultyId: string, cycleId?: string): 
 
     const coverSheet = workbook.addWorksheet('Cover');
     coverSheet.columns = [{ width: 30 }, { width: 40 }];
-    coverSheet.getRow(1).values = ['AFES Faculty Evaluation Report', ''];
+    coverSheet.getRow(1).values = ['FES Faculty Evaluation Report', ''];
     coverSheet.getRow(1).font = { bold: true, size: 16, color: { argb: 'FF002366' } };
     coverSheet.getRow(2).values = ['Professional Development Portfolio', ''];
     coverSheet.getRow(2).font = { bold: true, size: 12, color: { argb: 'FFB87333' } };
     
-    const trackingId = `AFES-${Date.now()}-${facultyId}`;
+    const trackingId = `FES-${Date.now()}-${facultyId}`;
     const generationTimestamp = new Date().toLocaleString();
     
     coverSheet.getRow(4).values = ['Report Metadata', ''];
@@ -133,7 +133,7 @@ export async function exportFacultyReport(facultyId: string, cycleId?: string): 
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `AFES_${faculty.name.replace(/[^a-zA-Z0-9]/g, '_')}_${cycle?.displayName.replace(/[^a-zA-Z0-9]/g, '_') || 'report'}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    link.download = `FES_${faculty.name.replace(/[^a-zA-Z0-9]/g, '_')}_${cycle?.displayName.replace(/[^a-zA-Z0-9]/g, '_') || 'report'}_${new Date().toISOString().split('T')[0]}.xlsx`;
     link.style.display = 'none';
     document.body.appendChild(link);
     link.click();

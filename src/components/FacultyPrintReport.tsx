@@ -9,7 +9,7 @@ export default function FacultyPrintReport({ facultyId, metrics, criteria, subQu
   if (!faculty) return null;
   const deptMetrics = store.getDepartmentMetrics(faculty.department);
   const critData = criteria.map(c => ({ name: c.name, avg: metrics.criteriaAverages[c.id] || 0, subQuestions: subQuestions.filter(sq => sq.criterionId === c.id).map(sq => ({ text: sq.text, avg: metrics.subQuestionAverages[sq.id] || 0 })) }));
-  const trackingId = `AFES-${Date.now()}-${facultyId}`;
+  const trackingId = `FES-${Date.now()}-${facultyId}`;
   const generationTimestamp = new Date().toLocaleString();
 
   const styles = {
@@ -33,7 +33,7 @@ export default function FacultyPrintReport({ facultyId, metrics, criteria, subQu
     <div style={styles.page}>
       <div style={styles.header}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-          <div><h1 style={styles.title}>Faculty Evaluation Report</h1><p style={styles.subtitle}>Anonymous Faculty Evaluation System</p></div>
+          <div><h1 style={styles.title}>Faculty Evaluation Report</h1><p style={styles.subtitle}>Faculty Evaluation System</p></div>
           <div style={{ textAlign: 'right' }}><p style={{ margin: 0, fontSize: '10pt', color: '#6B7280' }}>Report Generated</p><p style={{ margin: '4px 0 0 0', fontSize: '12pt', fontWeight: 'bold', color: '#002366' }}>{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p></div>
         </div>
       </div>
@@ -41,7 +41,7 @@ export default function FacultyPrintReport({ facultyId, metrics, criteria, subQu
       <div style={styles.section}><h2 style={styles.sectionTitle}>Performance Summary</h2><div style={{ marginBottom: '20px' }}><div style={styles.metricBox}><div style={styles.metricLabel}>Total Submissions</div><div style={styles.metricValue}>{metrics.totalSubmissions}</div></div><div style={styles.metricBox}><div style={styles.metricLabel}>Overall Average</div><div style={styles.metricValue}>{metrics.overallAverage.toFixed(2)}</div></div><div style={styles.metricBox}><div style={styles.metricLabel}>Department Average</div><div style={styles.metricValue}>{deptMetrics.institutionAverage.toFixed(2)}</div></div></div></div>
       <div style={styles.section}><h2 style={styles.sectionTitle}>Criteria Performance Breakdown</h2><table style={styles.table}><thead><tr><th style={styles.th}>Criterion</th><th style={{ ...styles.th, width: '15%', textAlign: 'center' }}>Average</th><th style={{ ...styles.th, width: '20%', textAlign: 'center' }}>Rating</th></tr></thead><tbody>{critData.map((crit, i) => (<React.Fragment key={i}><tr style={{ backgroundColor: '#F5E6D3' }}><td style={{ ...styles.td, fontWeight: 'bold' }}>{crit.name}</td><td style={{ ...styles.td, textAlign: 'center', fontWeight: 'bold', color: crit.avg >= BENCHMARK ? '#2E8B57' : '#C41E3A' }}>{crit.avg.toFixed(2)}</td><td style={{ ...styles.td, textAlign: 'center', fontWeight: 'bold' }}>{crit.avg >= 4.5 ? 'Excellent' : crit.avg >= BENCHMARK ? 'Good' : crit.avg >= 2 ? 'Needs Improvement' : 'Critical'}</td></tr>{crit.subQuestions.map((sq, j) => (<tr key={`${i}-${j}`}><td style={{ ...styles.td, paddingLeft: '30px', fontSize: '10pt' }}>→ {sq.text}</td><td style={{ ...styles.td, textAlign: 'center', fontSize: '10pt', color: sq.avg >= BENCHMARK ? '#2E8B57' : '#C41E3A' }}>{sq.avg.toFixed(2)}</td><td style={{ ...styles.td, textAlign: 'center', fontSize: '10pt' }}>{sq.avg >= 4.5 ? 'Excellent' : sq.avg >= BENCHMARK ? 'Good' : sq.avg >= 2 ? 'Needs Improvement' : 'Critical'}</td></tr>))}</React.Fragment>))}</tbody></table></div>
       {metrics.feedback.length > 0 && (<div style={{ ...styles.section, pageBreakBefore: 'always' as any }}><h2 style={styles.sectionTitle}>Student Feedback (PII-Redacted)</h2>{metrics.feedback.map((fb, i) => (<div key={i} style={styles.feedbackItem}><p style={{ margin: '0 0 8px 0', fontSize: '11pt', fontStyle: 'italic' }}>"{fb.feedback}"</p><div style={{ fontSize: '9pt', color: '#6B7280', marginTop: '6px' }}>Course: {fb.courseId} • Submitted: {new Date(fb.submittedAt).toLocaleDateString()}</div></div>))}</div>)}
-      <div style={styles.footer}><p>Anonymous Faculty Evaluation System (AFES) • Tracking ID: {trackingId}</p></div>
+      <div style={styles.footer}><p>Faculty Evaluation System (FES) • Tracking ID: {trackingId}</p></div>
     </div>
   );
 }

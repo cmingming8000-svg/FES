@@ -68,6 +68,8 @@ export interface EvaluationCycle {
   verificationStatus?: 'pending_verification' | 'verified' | 'released';
   verifiedAt?: string;
   verifiedBy?: string;
+  adminRelease?: AdminRelease;
+  deanReleases?: Record<string, DeanRelease>;
 }
 
 export interface Criterion {
@@ -84,6 +86,21 @@ export interface Evaluation {
   ratings: Record<string, number>;
   feedback: string;
   submittedAt: string;
+  studentId?: string;
+}
+
+export interface AdminRelease {
+  released: boolean;
+  signature?: string;
+  releasedAt?: string;
+  releasedBy?: string;
+}
+
+export interface DeanRelease {
+  released: boolean;
+  signature?: string;
+  releasedAt?: string;
+  releasedBy?: string;
 }
 
 export interface AuditLogEntry {

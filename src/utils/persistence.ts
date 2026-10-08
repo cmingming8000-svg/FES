@@ -1,5 +1,5 @@
-const STORAGE_KEY = 'afes_data';
-const STORAGE_VERSION = '4.0.0'; // Bumped to reset all faculty to pending_review status
+const STORAGE_KEY = 'fes_data';
+const STORAGE_VERSION = '4.0.0';
 
 export function saveToLocalStorage(inputData: any): boolean {
   try {
@@ -51,7 +51,7 @@ export function exportData(inputData: any): void {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `afes_backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `fes_backup_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
