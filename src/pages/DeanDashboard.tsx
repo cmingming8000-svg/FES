@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { store, BENCHMARK, THRESHOLD } from '../store';
 import { useAuth } from '../auth';
 import { exportDeanReport } from '../utils/deanReport';
-import type { Criterion } from '../types';
+import type { Criterion, Faculty } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
-import { BarChart3, Users, TrendingUp, Shield, Award, CheckCircle, Download, AlertTriangle, MessageSquare, Printer } from 'lucide-react';
+import { BarChart3, Users, TrendingUp, Shield, Award, CheckCircle, Download, AlertTriangle, MessageSquare, Printer, Eye, Bell, Lightbulb, Target } from 'lucide-react';
 import DeanPrintReport from '../components/DeanPrintReport';
 import SignaturePad from '../components/SignaturePad';
 
@@ -28,8 +28,92 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
   const isDeanReleased = store.isCycleDeanReleased(cycleId, department);
   const [showDeanSignModal, setShowDeanSignModal] = useState(false);
   const [deanSignature, setDeanSignature] = useState<string | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState<Faculty | null>(null);
+  const [reminderSent, setReminderSent] = useState<Record<string, boolean>>({});
 
   useEffect(() => { setCriteria(store.getCriteria()); const unsubs = [store.subscribe('submission_added', () => setCriteria(store.getCriteria())), store.subscribe('acknowledgment_changed', () => setCriteria(store.getCriteria())), store.subscribe('criteria_changed', () => setCriteria(store.getCriteria())), store.subscribe('cycle_changed', () => setCriteria(store.getCriteria()))]; return () => unsubs.forEach(u => u()); }, []);
+
+  // Helper function for sentiment analysis
+  const analyzeSentiment = (feedback: string[]): { positive: number; needsAttention: number; total: number } => {
+    const positiveKeywords = ['excellent', 'great', 'good', 'amazing', 'wonderful', 'fantastic', 'engaging', 'clear', 'helpful', 'passionate', 'approachable', 'fair', 'organized', 'effective'];
+    const negativeKeywords = ['poor', 'bad', 'terrible', 'confusing', 'unclear', 'unfair', 'disorganized', 'boring', 'slow', 'rude', 'unprofessional'];
+    
+    let positive = 0;
+    let needsAttention = 0;
+    
+    feedback.forEach(fb => {
+      const lowerFb = fb.toLowerCase();
+      const hasPositive = positiveKeywords.some(kw => lowerFb.includes(kw));
+      const hasNegative = negativeKeywords.some(kw => lowerFb.includes(kw));
+      
+      if (hasPositive && !hasNegative) positive++;
+      else if (hasNegative) needsAttention++;
+    });
+    
+    return { positive, needsAttention, total: feedback.length };
+  };
+
+  // Helper function to extract top themes from feedback
+  const extractTopThemes = (feedback: string[], topN: number = 3): string[] => {
+    const themeKeywords: Record<string, string[]> = {
+      'Engaging lectures': ['engaging', 'interesting', 'captivating', 'dynamic'],
+      'Clear explanations': ['clear', 'understandable', 'well-explained', 'organized'],
+      'Good pacing': ['pacing', 'speed', 'tempo', 'not too fast', 'not too slow'],
+      'Approachable': ['approachable', 'available', 'helpful', 'accessible'],
+      'Fair assessments': ['fair', 'reasonable', 'balanced', 'just'],
+      'Passionate teaching': ['passionate', 'enthusiastic', 'energetic', 'dedicated'],
+    };
+    
+    const themeCounts: Record<string, number> = {};
+    
+    feedback.forEach(fb => {
+      const lowerFb = fb.toLowerCase();
+      Object.entries(themeKeywords).forEach(([theme, keywords]) => {
+        if (keywords.some(kw => lowerFb.includes(kw))) {
+          themeCounts[theme] = (themeCounts[theme] || 0) + 1;
+        }
+      });
+    });
+    
+    return Object.entries(themeCounts)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, topN)
+      .map(([theme]) => theme);
+  };
+
+  // Get all feedback for the department
+  const getAllDepartmentFeedback = (): string[] => {
+    const allFeedback: string[] = [];
+    faculty.forEach(f => {
+      const metrics = store.getFacultyMetrics(f.id, cycleId);
+      metrics.feedback.forEach(fb => allFeedback.push(fb.feedback));
+    });
+    return allFeedback;
+  };
+
+  // Get course-level performance
+  const getCourseLevelPerformance = () => {
+    const courseData: Record<string, { submissions: number; total: number }> = {};
+    
+    faculty.forEach(f => {
+      const metrics = store.getFacultyMetrics(f.id, cycleId);
+      Object.entries(metrics.courseBreakdown).forEach(([course, data]) => {
+        if (!courseData[course]) {
+          courseData[course] = { submissions: 0, total: 0 };
+        }
+        courseData[course].submissions += data.count;
+        courseData[course].total += data.average * data.count;
+      });
+    });
+    
+    return Object.entries(courseData)
+      .map(([course, data]) => ({
+        course,
+        submissions: data.submissions,
+        average: data.submissions > 0 ? data.total / data.submissions : 0,
+      }))
+      .sort((a, b) => b.average - a.average);
+  };
 
   const deptEvals = store.getEvaluationsForDepartment(department, cycleId);
   const facultyPerformance = faculty.map(f => { const metrics = store.getFacultyMetrics(f.id, cycleId); return { id: f.id, name: f.name, totalSubmissions: metrics.totalSubmissions, overallAverage: metrics.overallAverage, acknowledgmentStatus: f.acknowledgmentStatus }; });
@@ -56,10 +140,57 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
     setDeanSignature(null);
   };
 
+  const handleSendReminder = async (facultyId: string) => {
+    await store.sendReminder(facultyId);
+    setReminderSent(prev => ({ ...prev, [facultyId]: true }));
+    setTimeout(() => {
+      setReminderSent(prev => ({ ...prev, [facultyId]: false }));
+    }, 3000);
+  };
+
+  const handleReviewFaculty = (faculty: Faculty) => {
+    setShowReviewModal(faculty);
+  };
+
   const deptTNACriteria = criteria.map(c => ({
     name: c.name,
     average: deptMetrics.criteriaAverages[c.id] || 0,
   })).filter(c => c.average < BENCHMARK && c.average > 0).sort((a, b) => a.average - b.average);
+
+  // Acknowledgment status breakdown
+  const acknowledgmentBreakdown = {
+    acknowledged: faculty.filter(f => f.acknowledgmentStatus === 'acknowledged').length,
+    pendingAcknowledgment: faculty.filter(f => f.acknowledgmentStatus === 'pending_acknowledgment').length,
+    disputed: faculty.filter(f => f.acknowledgmentStatus === 'disputed').length,
+    pendingReview: faculty.filter(f => f.acknowledgmentStatus === 'pending_review').length,
+  };
+
+  // Program completion rates
+  const programCompletionRates = store.getPrograms().map(program => {
+    const programFaculty = faculty.filter(f => f.department === program.department);
+    const facultyAboveThreshold = programFaculty.filter(f => store.getFacultyMetrics(f.id, cycleId).totalSubmissions >= THRESHOLD);
+    const totalSubmissions = programFaculty.reduce((sum, f) => sum + store.getFacultyMetrics(f.id, cycleId).totalSubmissions, 0);
+    const completionRate = programFaculty.length > 0 ? Math.round((facultyAboveThreshold.length / programFaculty.length) * 100) : 0;
+    
+    return {
+      program: program.name,
+      completionRate,
+      facultyAboveThreshold: facultyAboveThreshold.length,
+      totalFaculty: programFaculty.length,
+      totalSubmissions,
+    };
+  });
+
+  // Feedback analysis
+  const allFeedback = getAllDepartmentFeedback();
+  const sentimentAnalysis = analyzeSentiment(allFeedback);
+  const topThemes = extractTopThemes(allFeedback, 3);
+  const sentimentRatio = sentimentAnalysis.total > 0 
+    ? ((sentimentAnalysis.positive / sentimentAnalysis.total) * 100).toFixed(1)
+    : '0.0';
+
+  // Course-level performance
+  const courseLevelPerformance = getCourseLevelPerformance();
 
   if (isPrintMode) return (<DeanPrintReport department={department} cycleName={viewingCycle?.displayName || 'Current Cycle'} criteria={criteria} />);
 
