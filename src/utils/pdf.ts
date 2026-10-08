@@ -232,9 +232,9 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
       });
     });
 
-    // ===== SUBJECT PERFORMANCE =====
+    // ===== COURSE/SUBJECT PERFORMANCE =====
     yPos += 5;
-    addSectionHeader('Subject Performance');
+    addSectionHeader('Course/Subject Performance');
     
     // Define column positions for course table
     const courseCol1Start = margin;
@@ -248,7 +248,7 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('Subject', courseCol1Start + 2, yPos + 5);
+    doc.text('Course/Subject', courseCol1Start + 2, yPos + 5);
     doc.text('Submissions', courseCol2Start + 2, yPos + 5);
     doc.text('Average', courseCol3Start + 2, yPos + 5);
     yPos += 8;
