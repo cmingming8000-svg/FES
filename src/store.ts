@@ -143,16 +143,31 @@ function generateSeedEvaluations(): Evaluation[] {
   facultyEvals.forEach(({ id, count, base }) => {
     const faculty = FACULTY_SEED.find(f => f.id === id);
     if (!faculty) return;
+    
+    // Get all students enrolled in this faculty's courses
+    const enrolledStudents = STUDENTS_SEED.filter(student => 
+      student.enrolledSubjects.some(subjectId => faculty.courses.includes(subjectId))
+    );
+    
     for (let i = 0; i < count; i++) {
       const ratings = createDeterministicRatings(base);
+      const courseId = faculty.courses[i % faculty.courses.length];
+      
+      // Find a student enrolled in this specific course
+      const studentForCourse = enrolledStudents.filter(s => s.enrolledSubjects.includes(courseId));
+      const selectedStudent = studentForCourse.length > 0 
+        ? studentForCourse[i % studentForCourse.length]
+        : enrolledStudents[i % enrolledStudents.length];
+      
       evals.push({
         id: uuidv4(),
         facultyId: id,
-        courseId: faculty.courses[i % faculty.courses.length],
+        courseId: courseId,
         cycleId: 'cyc-001',
         ratings,
         feedback: feedbacks[i % feedbacks.length],
         submittedAt: new Date(2026, 2, 5 + i).toISOString(),
+        studentId: selectedStudent?.id,
       });
     }
   });
