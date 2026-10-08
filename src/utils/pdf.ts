@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 import { store, BENCHMARK } from '../store';
 
-export async function exportFacultyPDF(facultyId: string, cycleId?: string): Promise<void> {
+export async function exportFacultyPDF(facultyId: string, cycleId?: string, includeStudentIds: boolean = false): Promise<void> {
   const faculty = store.getFacultyById(facultyId);
   if (!faculty) { 
     alert('Faculty not found'); 
@@ -19,6 +19,9 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
   
   // Calculate metrics based on current criteria
   const metrics = store.getFacultyMetrics(facultyId, effectiveCycleId);
+  
+  // Get evaluations with student IDs if admin
+  const evaluations = includeStudentIds ? store.getEvaluationsForFaculty(facultyId, effectiveCycleId) : [];
 
   if (!metrics || metrics.totalSubmissions === 0) { 
     alert('No evaluation data available for this period'); 
@@ -274,17 +277,70 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
       yPos += 7;
     });
 
+    // ===== STUDENT EVALUATION DETAILS (Admin Only) =====
+    if (includeStudentIds && evaluations.length > 0) {
+      yPos += 5;
+      addSectionHeader('Evaluation Details (Admin View — Student IDs Visible)');
+      
+      const evalCol1Start = margin;
+      const evalCol2Start = margin + 35;
+      const evalCol3Start = margin + 85;
+      const evalCol4Start = margin + 130;
+      
+      // Table header
+      checkPageBreak(10);
+      doc.setFillColor(0, 35, 102);
+      doc.rect(margin, yPos, contentWidth, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Student ID', evalCol1Start + 2, yPos + 5);
+      doc.text('Course', evalCol2Start + 2, yPos + 5);
+      doc.text('Avg Rating', evalCol3Start + 2, yPos + 5);
+      doc.text('Date', evalCol4Start + 2, yPos + 5);
+      yPos += 8;
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+      
+      evaluations.forEach((ev, idx) => {
+        checkPageBreak(7);
+        const avgRating = Object.values(ev.ratings).reduce((a, b) => a + b, 0) / Object.values(ev.ratings).length;
+        
+        if (idx % 2 === 0) {
+          doc.setFillColor(248, 246, 241);
+          doc.rect(margin, yPos, contentWidth, 6, 'F');
+        }
+        
+        doc.setFontSize(8);
+        doc.text(ev.studentId || 'Unknown', evalCol1Start + 2, yPos + 4);
+        doc.text(ev.courseId, evalCol2Start + 2, yPos + 4);
+        
+        if (avgRating >= BENCHMARK) {
+          doc.setTextColor(46, 139, 87);
+        } else {
+          doc.setTextColor(196, 30, 58);
+        }
+        doc.text(avgRating.toFixed(2), evalCol3Start + 2, yPos + 4);
+        doc.setTextColor(0, 0, 0);
+        
+        doc.text(new Date(ev.submittedAt).toLocaleDateString(), evalCol4Start + 2, yPos + 4);
+        yPos += 6;
+      });
+    }
+
     // ===== STUDENT FEEDBACK =====
     if (metrics.feedback.length > 0) {
       yPos += 5;
       addSectionHeader('Student Feedback');
       
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'italic');
-      doc.setTextColor(100, 100, 100);
-      doc.text('(PII-Redacted for anonymity)', margin, yPos);
-      yPos += 5;
-      doc.setTextColor(0, 0, 0);
+      if (!includeStudentIds) {
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(100, 100, 100);
+        doc.text('(PII-Redacted for anonymity)', margin, yPos);
+        yPos += 5;
+        doc.setTextColor(0, 0, 0);
+      }
       
       metrics.feedback.forEach((fb, index) => {
         // Split feedback text into lines
