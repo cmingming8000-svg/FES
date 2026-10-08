@@ -268,9 +268,9 @@ export async function exportFacultyReport(facultyId: string, cycleId?: string): 
     // ============================
     // SHEET 3: COURSE PERFORMANCE
     // ============================
-    const courseSheet = workbook.addWorksheet('Course Performance');
+    const courseSheet = workbook.addWorksheet('Subject Performance');
     courseSheet.columns = [
-      { width: 22 },  // Course
+      { width: 22 },  // Subject
       { width: 16 },  // Submissions
       { width: 16 },  // Average Score
       { width: 18 },  // Rating
@@ -278,7 +278,7 @@ export async function exportFacultyReport(facultyId: string, cycleId?: string): 
 
     courseSheet.views = [{ state: 'frozen', ySplit: 1 }];
 
-    const courseHeaders = ['Course', 'Submissions', 'Average Score', 'Rating'];
+    const courseHeaders = ['Subject', 'Submissions', 'Average Score', 'Rating'];
     courseSheet.getRow(1).values = courseHeaders;
     courseSheet.getRow(1).eachCell(cell => {
       cell.fill = headerFill;
