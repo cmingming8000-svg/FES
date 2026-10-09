@@ -64,8 +64,6 @@ export default function FacultyDashboard({ viewingCycleId, onViewingCycleChange 
   const donutData = [{ name: '5★', value: currentDistribution[4], percentage: totalRatings > 0 ? ((currentDistribution[4] / totalRatings) * 100).toFixed(1) : '0' }, { name: '4★', value: currentDistribution[3], percentage: totalRatings > 0 ? ((currentDistribution[3] / totalRatings) * 100).toFixed(1) : '0' }, { name: '3★', value: currentDistribution[2], percentage: totalRatings > 0 ? ((currentDistribution[2] / totalRatings) * 100).toFixed(1) : '0' }, { name: '2★', value: currentDistribution[1], percentage: totalRatings > 0 ? ((currentDistribution[1] / totalRatings) * 100).toFixed(1) : '0' }, { name: '1★', value: currentDistribution[0], percentage: totalRatings > 0 ? ((currentDistribution[0] / totalRatings) * 100).toFixed(1) : '0' }];
   const breakdownData = criteria.map(c => ({ criterion: c, subQuestions: subQuestions.filter(sq => sq.criterionId === c.id).map(sq => ({ sq, score: metrics?.subQuestionAverages[sq.id] || 0 })) }));
   const belowThreshold = !metrics || metrics.totalSubmissions < THRESHOLD;
-  const facultyDept = faculty?.department || '';
-  const isDeanReleased = store.isCycleDeanReleased(cycleId, facultyDept);
   const isAdminReleased = store.isCycleAdminReleased(cycleId);
 
   if (isPrintMode && metrics) return (<FacultyPrintReport facultyId={facultyId} metrics={metrics} criteria={criteria} subQuestions={subQuestions} cycleName={viewingCycle?.displayName || 'Current Cycle'} />);
