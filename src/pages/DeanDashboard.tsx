@@ -196,12 +196,6 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
 
   return (
     <div className="space-y-6">
-      {/* Sample Data Notice */}
-      <div className="rounded-xl p-4" style={{ backgroundColor: '#FEF3C7', border: '2px solid #B87333' }}>
-        <p className="text-sm font-semibold" style={{ color: '#B87333' }}>📋 Sample Data Notice</p>
-        <p className="text-xs mt-1" style={{ color: '#4B5563' }}>This is a sample. The data displayed is not to be copied, it's there for demonstration purposes only.</p>
-      </div>
-
       {/* Header & Metadata */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
