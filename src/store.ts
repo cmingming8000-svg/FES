@@ -404,6 +404,24 @@ class DataStore {
     this.emit('training_changed');
   }
 
+  // AI-Driven Department-Level TNA
+  async generateDepartmentTNA(department: string, cycleId?: string): Promise<any> {
+    await this.simulateLatency();
+    const { generateDepartmentTNA: generateDeptTNA } = await import('./utils/tnaEngine');
+    const tna = generateDeptTNA(department, cycleId);
+    this.addAuditLog('admin:ai', 'department_tna_generated', department, `AI-driven TNA generated for ${department} department`);
+    return tna;
+  }
+
+  // AI-Driven Institution-Level TNA
+  async generateInstitutionalTNA(cycleId?: string): Promise<any> {
+    await this.simulateLatency();
+    const { generateInstitutionalTNA: generateInstTNA } = await import('./utils/tnaEngine');
+    const tna = generateInstTNA(cycleId);
+    this.addAuditLog('admin:ai', 'institutional_tna_generated', 'institution', `AI-driven institutional TNA generated`);
+    return tna;
+  }
+
   getCycles(): EvaluationCycle[] { return JSON.parse(JSON.stringify(this.cycles)); }
   getActiveCycle(): EvaluationCycle | undefined { return this.cycles.find(c => c.status === 'active'); }
 

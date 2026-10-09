@@ -149,3 +149,55 @@ export interface Dispute {
   resolvedBy?: string;
   resolution?: string;
 }
+
+// AI-Driven TNA Engine Types
+export interface TNADeficit {
+  criterionId: string;
+  criterionName: string;
+  average: number;
+  deficit: number;
+  severity: 'critical' | 'high' | 'medium';
+  subQuestionDeficits: Array<{
+    subQuestionId: string;
+    subQuestionText: string;
+    average: number;
+    deficit: number;
+  }>;
+}
+
+export interface DepartmentTNA {
+  department: string;
+  cycleId: string;
+  generatedAt: string;
+  overallAverage: number;
+  totalSubmissions: number;
+  deficits: TNADeficit[];
+  feedbackThemes: {
+    positive: string[];
+    negative: string[];
+    sentimentRatio: number;
+  };
+  recommendations: {
+    immediate: string[];
+    shortTerm: string[];
+    longTerm: string[];
+  };
+  priorityScore: number;
+}
+
+export interface InstitutionalTNA {
+  cycleId: string;
+  generatedAt: string;
+  departments: DepartmentTNA[];
+  institutionalAverage: number;
+  totalSubmissions: number;
+  criticalDepartments: string[];
+  crossDepartmentalThemes: {
+    strengths: string[];
+    weaknesses: string[];
+  };
+  strategicRecommendations: {
+    institutionWide: string[];
+    departmentSpecific: Record<string, string[]>;
+  };
+}

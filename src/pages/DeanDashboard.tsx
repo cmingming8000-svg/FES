@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { store, BENCHMARK, THRESHOLD } from '../store';
 import { useAuth } from '../auth';
 import { exportDeanReport } from '../utils/deanReport';
-import type { Criterion, Faculty } from '../types';
+import { generateDepartmentTNA, extractTNAInsights } from '../utils/tnaEngine';
+import type { Criterion, Faculty, DepartmentTNA } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
-import { BarChart3, Users, TrendingUp, Shield, Award, CheckCircle, Download, AlertTriangle, MessageSquare, Printer, Eye, Bell, Lightbulb, Target } from 'lucide-react';
+import { BarChart3, Users, TrendingUp, Shield, Award, CheckCircle, Download, AlertTriangle, MessageSquare, Printer, Eye, Bell, Lightbulb, Target, Sparkles } from 'lucide-react';
 import DeanPrintReport from '../components/DeanPrintReport';
 import SignaturePad from '../components/SignaturePad';
 
@@ -152,10 +153,15 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
     setShowReviewModal(faculty);
   };
 
-  const deptTNACriteria = criteria.map(c => ({
-    name: c.name,
-    average: deptMetrics.criteriaAverages[c.id] || 0,
-  })).filter(c => c.average < BENCHMARK && c.average > 0).sort((a, b) => a.average - b.average);
+  // AI-Driven Department TNA
+  const [departmentTNA, setDepartmentTNA] = useState<DepartmentTNA | null>(null);
+  
+  useEffect(() => {
+    if (isAdminReleased && isDeanReleased) {
+      const tna = generateDepartmentTNA(department, cycleId);
+      setDepartmentTNA(tna);
+    }
+  }, [department, cycleId, isAdminReleased, isDeanReleased]);
 
   // Acknowledgment status breakdown
   const acknowledgmentBreakdown = {
@@ -223,7 +229,114 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
       <div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#EDEBE8' }}><h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: '#002366' }}><BarChart3 size={16} style={{ color: '#B87333' }} />Institution Criteria Performance (avg / 5.0)</h3><ResponsiveContainer width="100%" height={220}><BarChart data={institutionCriteriaData} layout="vertical" margin={{ left: 20 }}><CartesianGrid strokeDasharray="3 3" stroke="#D5D8DC" /><XAxis type="number" domain={[0, 5]} tick={{ fontSize: 11 }} /><YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: '#1A1A1A' }} width={100} /><Tooltip contentStyle={{ backgroundColor: '#EDEBE8', border: '1px solid #D5D8DC', borderRadius: '8px' }} /><ReferenceLine x={BENCHMARK} stroke="#C41E3A" strokeDasharray="5 5" strokeWidth={2} /><Bar dataKey="score" radius={[0, 4, 4, 0]}>{institutionCriteriaData.map((entry, i) => (<Cell key={i} fill={entry.score >= BENCHMARK ? '#2E8B57' : '#C41E3A'} />))}</Bar></BarChart></ResponsiveContainer></div>
       <div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#EDEBE8' }}><h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: '#002366' }}><BarChart3 size={16} style={{ color: '#B87333' }} />Department Score Distribution</h3><div className="flex items-center gap-4"><div className="relative"><ResponsiveContainer width={180} height={180}><PieChart><Pie data={deptDonutData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} dataKey="value" paddingAngle={2}>{deptDonutData.map((_, i) => (<Cell key={i} fill={STAR_COLORS[i]} />))}</Pie></PieChart></ResponsiveContainer><div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-xl font-bold" style={{ color: '#002366' }}>{deptAvg.toFixed(1)}</span><span className="text-[10px]" style={{ color: '#4B5563' }}>avg score</span></div></div><div className="flex-1 space-y-1.5">{deptDonutData.map((d, i) => (<div key={i} className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded-sm" style={{ backgroundColor: STAR_COLORS[i] }} /><span>{d.name}</span><span className="font-bold">{d.value}</span><span style={{ color: '#9CA3AF' }}>({d.percentage}%)</span></div>))}</div></div></div>
       {isAdminReleased && isDeanReleased && (<div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#EDEBE8' }}><h3 className="text-sm font-semibold mb-3" style={{ color: '#002366' }}>Faculty Performance Summary</h3><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr style={{ backgroundColor: '#002366' }}><th className="text-left px-4 py-2 text-white font-medium">Faculty</th><th className="text-center px-4 py-2 text-white font-medium">Submissions</th><th className="text-center px-4 py-2 text-white font-medium">Average</th><th className="text-center px-4 py-2 text-white font-medium">Status</th></tr></thead><tbody>{facultyPerformance.map((f, i) => (<tr key={f.id} style={{ backgroundColor: i % 2 === 0 ? '#EDEBE8' : '#F8F6F1' }}><td className="px-4 py-2 font-medium">{f.name}</td><td className="px-4 py-2 text-center">{f.totalSubmissions}</td><td className="px-4 py-2 text-center font-bold" style={{ color: f.totalSubmissions < THRESHOLD ? '#9CA3AF' : f.overallAverage >= BENCHMARK ? '#2E8B57' : '#C41E3A' }}>{f.totalSubmissions < THRESHOLD ? '—' : f.overallAverage.toFixed(2)}</td><td className="px-4 py-2 text-center"><span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: f.acknowledgmentStatus === 'acknowledged' ? '#D1FAE5' : '#F5E6D3', color: f.acknowledgmentStatus === 'acknowledged' ? '#2E8B57' : '#B87333' }}>{f.acknowledgmentStatus === 'acknowledged' ? '✓ Ack' : '⏳ Pending'}</span></td></tr>))}</tbody></table></div></div>)}
-      {isAdminReleased && isDeanReleased && deptTNACriteria.length > 0 && (<div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#FEE2E2', border: '1px solid #C41E3A' }}><h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: '#C41E3A' }}><AlertTriangle size={16} />Department Training Needs Analysis</h3><p className="text-xs mb-3" style={{ color: '#4B5563' }}>The following department criteria scored below the {BENCHMARK.toFixed(1)}/5.0 benchmark, indicating department-wide training needs:</p><div className="space-y-2">{deptTNACriteria.map((c, i) => (<div key={i} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: '#FFFFFF' }}><div className="flex items-center gap-3"><span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: '#C41E3A' }}>{i + 1}</span><span className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{c.name}</span></div><div className="flex items-center gap-3"><div className="w-24 h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#D5D8DC' }}><div className="h-full rounded-full" style={{ width: `${(c.average / 5) * 100}%`, backgroundColor: '#C41E3A' }} /></div><span className="text-sm font-bold" style={{ color: '#C41E3A' }}>{c.average.toFixed(2)}</span></div></div>))}</div><div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: '#FFFFFF', border: '1px solid #FEE2E2' }}><p className="text-xs font-semibold mb-1" style={{ color: '#C41E3A' }}>Recommended Department Actions:</p><ul className="text-xs space-y-1" style={{ color: '#4B5563' }}><li>• Schedule department-wide workshop addressing low-scoring criteria</li><li>• Review curriculum and teaching methodologies for improvement areas</li><li>• Consider peer mentoring programs between high and low performers</li></ul></div></div>)}
+      {/* AI-Driven Department TNA */}
+      {isAdminReleased && isDeanReleased && departmentTNA && departmentTNA.deficits.length > 0 && (
+        <div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#FEE2E2', border: '2px solid #C41E3A' }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: '#C41E3A' }}>
+              <Sparkles size={20} />AI-Driven Training Needs Analysis
+            </h3>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium px-2 py-1 rounded" style={{ backgroundColor: departmentTNA.priorityScore > 10 ? '#FEE2E2' : departmentTNA.priorityScore > 5 ? '#FEF3C7' : '#D1FAE5', color: departmentTNA.priorityScore > 10 ? '#C41E3A' : departmentTNA.priorityScore > 5 ? '#B87333' : '#2E8B57' }}>
+                Priority Score: {departmentTNA.priorityScore}
+              </span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="p-3 rounded-lg" style={{ backgroundColor: '#FFFFFF' }}>
+              <p className="text-xs font-medium" style={{ color: '#4B5563' }}>Department Average</p>
+              <p className="text-2xl font-bold" style={{ color: departmentTNA.overallAverage >= BENCHMARK ? '#2E8B57' : '#C41E3A' }}>{departmentTNA.overallAverage.toFixed(2)}/5.0</p>
+            </div>
+            <div className="p-3 rounded-lg" style={{ backgroundColor: '#FFFFFF' }}>
+              <p className="text-xs font-medium" style={{ color: '#4B5563' }}>Total Evaluations</p>
+              <p className="text-2xl font-bold" style={{ color: '#002366' }}>{departmentTNA.totalSubmissions}</p>
+            </div>
+            <div className="p-3 rounded-lg" style={{ backgroundColor: '#FFFFFF' }}>
+              <p className="text-xs font-medium" style={{ color: '#4B5563' }}>Sentiment Ratio</p>
+              <p className="text-2xl font-bold" style={{ color: departmentTNA.feedbackThemes.sentimentRatio >= 50 ? '#2E8B57' : '#C41E3A' }}>{departmentTNA.feedbackThemes.sentimentRatio.toFixed(1)}%</p>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold mb-2" style={{ color: '#C41E3A' }}>Identified Performance Deficits</h4>
+            <div className="space-y-2">
+              {departmentTNA.deficits.map((deficit, i) => (
+                <div key={i} className="p-3 rounded-lg" style={{ backgroundColor: '#FFFFFF', border: `2px solid ${deficit.severity === 'critical' ? '#C41E3A' : deficit.severity === 'high' ? '#B87333' : '#D5D8DC'}` }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: deficit.severity === 'critical' ? '#C41E3A' : deficit.severity === 'high' ? '#B87333' : '#9CA3AF' }}>
+                        {i + 1}
+                      </span>
+                      <span className="text-sm font-semibold" style={{ color: '#1A1A1A' }}>{deficit.criterionName}</span>
+                      <span className="text-xs px-2 py-0.5 rounded" style={{ backgroundColor: deficit.severity === 'critical' ? '#FEE2E2' : deficit.severity === 'high' ? '#FEF3C7' : '#F3F4F6', color: deficit.severity === 'critical' ? '#C41E3A' : deficit.severity === 'high' ? '#B87333' : '#6B7280' }}>
+                        {deficit.severity.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold" style={{ color: '#C41E3A' }}>{deficit.average.toFixed(2)}/5.0</p>
+                      <p className="text-xs" style={{ color: '#4B5563' }}>Deficit: {deficit.deficit.toFixed(2)}</p>
+                    </div>
+                  </div>
+                  {deficit.subQuestionDeficits.length > 0 && (
+                    <div className="mt-2 pt-2 border-t" style={{ borderColor: '#D5D8DC' }}>
+                      <p className="text-xs font-medium mb-1" style={{ color: '#4B5563' }}>Specific Areas of Concern:</p>
+                      <div className="space-y-1">
+                        {deficit.subQuestionDeficits.slice(0, 3).map((sq, j) => (
+                          <div key={j} className="flex items-center justify-between text-xs">
+                            <span style={{ color: '#1A1A1A' }}>{sq.subQuestionText}</span>
+                            <span className="font-bold" style={{ color: '#C41E3A' }}>{sq.average.toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {departmentTNA.recommendations.immediate.length > 0 && (
+              <div className="p-3 rounded-lg" style={{ backgroundColor: '#FEE2E2', border: '1px solid #C41E3A' }}>
+                <p className="text-xs font-bold mb-2" style={{ color: '#C41E3A' }}>🚨 IMMEDIATE ACTIONS</p>
+                <ul className="text-xs space-y-1" style={{ color: '#1A1A1A' }}>
+                  {departmentTNA.recommendations.immediate.map((rec, i) => (
+                    <li key={i}>• {rec}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {departmentTNA.recommendations.shortTerm.length > 0 && (
+              <div className="p-3 rounded-lg" style={{ backgroundColor: '#FEF3C7', border: '1px solid #B87333' }}>
+                <p className="text-xs font-bold mb-2" style={{ color: '#B87333' }}>⚡ SHORT-TERM (1-3 months)</p>
+                <ul className="text-xs space-y-1" style={{ color: '#1A1A1A' }}>
+                  {departmentTNA.recommendations.shortTerm.slice(0, 4).map((rec, i) => (
+                    <li key={i}>• {rec}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {departmentTNA.recommendations.longTerm.length > 0 && (
+              <div className="p-3 rounded-lg" style={{ backgroundColor: '#D1FAE5', border: '1px solid #2E8B57' }}>
+                <p className="text-xs font-bold mb-2" style={{ color: '#2E8B57' }}>🎯 LONG-TERM (3-12 months)</p>
+                <ul className="text-xs space-y-1" style={{ color: '#1A1A1A' }}>
+                  {departmentTNA.recommendations.longTerm.slice(0, 4).map((rec, i) => (
+                    <li key={i}>• {rec}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D5D8DC' }}>
+            <p className="text-xs font-semibold mb-2" style={{ color: '#002366' }}>AI Analysis Generated: {new Date(departmentTNA.generatedAt).toLocaleString()}</p>
+            <p className="text-xs" style={{ color: '#4B5563' }}>
+              This AI-driven analysis ingests raw evaluation data including criterion averages, sub-question ratings, course breakdown scores, and student feedback sentiment to diagnose performance deficits and generate tailored development strategies.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Acknowledgment Compliance & Status */}
       {isAdminReleased && isDeanReleased && (
