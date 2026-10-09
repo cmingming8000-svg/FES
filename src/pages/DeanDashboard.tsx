@@ -116,7 +116,7 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
   };
 
   const deptEvals = store.getEvaluationsForDepartment(department, cycleId);
-  const facultyPerformance = faculty.map(f => { const metrics = store.getFacultyMetrics(f.id, cycleId); return { id: f.id, name: f.name, totalSubmissions: metrics.totalSubmissions, overallAverage: metrics.overallAverage, acknowledgmentStatus: f.acknowledgmentStatus }; });
+  const facultyPerformance = faculty.map(f => { const metrics = store.getFacultyMetrics(f.id, cycleId); return { ...f, totalSubmissions: metrics.totalSubmissions, overallAverage: metrics.overallAverage }; });
 
   const deptScoreDist = [0, 0, 0, 0, 0];
   deptEvals.forEach(ev => { Object.values(ev.ratings).forEach(rating => { if (rating >= 1 && rating <= 5) deptScoreDist[rating - 1]++; }); });
@@ -196,7 +196,26 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3"><div><h2 className="text-2xl font-bold" style={{ color: '#002366' }}>Department Overview</h2><p className="text-sm" style={{ color: '#4B5563' }}>{department} Department • {user?.displayName}</p>{viewingCycle && <p className="text-xs mt-1" style={{ color: '#B87333' }}>Viewing: {viewingCycle.displayName}</p>}</div><div className="flex items-center gap-2"><button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium hover:opacity-90" style={{ backgroundColor: '#D5D8DC', color: '#1A1A1A' }}><Printer size={14} />Print Report</button><button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#2E8B57' }}><Download size={14} />Export Report</button><div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ backgroundColor: '#F5E6D3' }}><Shield size={14} style={{ color: '#B87333' }} /><span className="text-xs font-medium" style={{ color: '#B87333' }}>Aggregated View Only</span></div></div></div>
+      {/* Sample Data Notice */}
+      <div className="rounded-xl p-4" style={{ backgroundColor: '#FEF3C7', border: '2px solid #B87333' }}>
+        <p className="text-sm font-semibold" style={{ color: '#B87333' }}>📋 Sample Data Notice</p>
+        <p className="text-xs mt-1" style={{ color: '#4B5563' }}>This is a sample. The data displayed is not to be copied, it's there for demonstration purposes only.</p>
+      </div>
+
+      {/* Header & Metadata */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-2xl font-bold" style={{ color: '#002366' }}>Department Overview</h2>
+          <p className="text-sm" style={{ color: '#4B5563' }}>{department} Department • {user?.displayName}</p>
+          {viewingCycle && <p className="text-xs mt-1" style={{ color: '#B87333' }}>Viewing: {viewingCycle.displayName}</p>}
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium hover:opacity-90" style={{ backgroundColor: '#D5D8DC', color: '#1A1A1A' }}><Printer size={14} />Print Report</button>
+          <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#2E8B57' }}><Download size={14} />Export Report</button>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ backgroundColor: '#F5E6D3' }}><Shield size={14} style={{ color: '#B87333' }} /><span className="text-xs font-medium" style={{ color: '#B87333' }}>Aggregated View Only</span></div>
+        </div>
+      </div>
+      
       <div className="rounded-xl p-3 flex items-center gap-2" style={{ backgroundColor: '#F5E6D3', border: '1px solid #B87333' }}><Shield size={16} style={{ color: '#B87333' }} /><p className="text-xs"><strong>Privacy Notice:</strong> Only department-level aggregated metrics are shown.</p></div>
       {!isAdminReleased && (<div className="rounded-xl p-5 flex items-center gap-3" style={{ backgroundColor: '#FEF3C7', border: '2px solid #B87333' }}><Shield size={24} style={{ color: '#B87333' }} /><div className="flex-1"><p className="font-bold text-sm" style={{ color: '#B87333' }}>⏳ Pending Admin Release</p><p className="text-xs mt-1" style={{ color: '#4B5563' }}>The Administrator has not yet released evaluation data for this cycle. Department metrics and faculty data will become available after the Admin signs the Release Contract.</p></div></div>)}
       {isAdminReleased && !isDeanReleased && (<div className="rounded-xl p-5" style={{ backgroundColor: '#EDEBE8', border: '2px solid #002366' }}><div className="flex items-center gap-3 mb-4"><Shield size={24} style={{ color: '#002366' }} /><div><p className="font-bold text-sm" style={{ color: '#002366' }}>📋 Dean Receipt & Release Contract</p><p className="text-xs mt-1" style={{ color: '#4B5563' }}>Admin has released data. Please review and sign to authorize faculty access to their evaluation metrics.</p></div></div><div className="p-4 rounded-lg mb-4" style={{ backgroundColor: '#F8F6F1', border: '1px solid #D5D8DC' }}><p className="text-xs font-semibold mb-2" style={{ color: '#002366' }}>Contract Terms:</p><ul className="text-xs space-y-1" style={{ color: '#4B5563' }}><li>• Acknowledge receipt of evaluation data for the {department} department.</li><li>• Confirm data has been reviewed for accuracy at the department aggregate level.</li><li>• Authorize release of individual faculty metrics to faculty members in this department.</li><li>• Understand that faculty may file disputes regarding their evaluation results.</li></ul></div><button onClick={() => setShowDeanSignModal(true)} className="px-4 py-2 rounded-lg text-sm font-medium text-white hover:opacity-90" style={{ backgroundColor: '#002366' }}>Sign Receipt & Release Contract</button></div>)}
@@ -211,6 +230,294 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
       <div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#EDEBE8' }}><h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: '#002366' }}><BarChart3 size={16} style={{ color: '#B87333' }} />Department Score Distribution</h3><div className="flex items-center gap-4"><div className="relative"><ResponsiveContainer width={180} height={180}><PieChart><Pie data={deptDonutData} cx="50%" cy="50%" innerRadius={55} outerRadius={80} dataKey="value" paddingAngle={2}>{deptDonutData.map((_, i) => (<Cell key={i} fill={STAR_COLORS[i]} />))}</Pie></PieChart></ResponsiveContainer><div className="absolute inset-0 flex flex-col items-center justify-center"><span className="text-xl font-bold" style={{ color: '#002366' }}>{deptAvg.toFixed(1)}</span><span className="text-[10px]" style={{ color: '#4B5563' }}>avg score</span></div></div><div className="flex-1 space-y-1.5">{deptDonutData.map((d, i) => (<div key={i} className="flex items-center gap-2 text-xs"><div className="w-3 h-3 rounded-sm" style={{ backgroundColor: STAR_COLORS[i] }} /><span>{d.name}</span><span className="font-bold">{d.value}</span><span style={{ color: '#9CA3AF' }}>({d.percentage}%)</span></div>))}</div></div></div>
       {isAdminReleased && isDeanReleased && (<div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#EDEBE8' }}><h3 className="text-sm font-semibold mb-3" style={{ color: '#002366' }}>Faculty Performance Summary</h3><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr style={{ backgroundColor: '#002366' }}><th className="text-left px-4 py-2 text-white font-medium">Faculty</th><th className="text-center px-4 py-2 text-white font-medium">Submissions</th><th className="text-center px-4 py-2 text-white font-medium">Average</th><th className="text-center px-4 py-2 text-white font-medium">Status</th></tr></thead><tbody>{facultyPerformance.map((f, i) => (<tr key={f.id} style={{ backgroundColor: i % 2 === 0 ? '#EDEBE8' : '#F8F6F1' }}><td className="px-4 py-2 font-medium">{f.name}</td><td className="px-4 py-2 text-center">{f.totalSubmissions}</td><td className="px-4 py-2 text-center font-bold" style={{ color: f.totalSubmissions < THRESHOLD ? '#9CA3AF' : f.overallAverage >= BENCHMARK ? '#2E8B57' : '#C41E3A' }}>{f.totalSubmissions < THRESHOLD ? '—' : f.overallAverage.toFixed(2)}</td><td className="px-4 py-2 text-center"><span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: f.acknowledgmentStatus === 'acknowledged' ? '#D1FAE5' : '#F5E6D3', color: f.acknowledgmentStatus === 'acknowledged' ? '#2E8B57' : '#B87333' }}>{f.acknowledgmentStatus === 'acknowledged' ? '✓ Ack' : '⏳ Pending'}</span></td></tr>))}</tbody></table></div></div>)}
       {isAdminReleased && isDeanReleased && deptTNACriteria.length > 0 && (<div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#FEE2E2', border: '1px solid #C41E3A' }}><h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: '#C41E3A' }}><AlertTriangle size={16} />Department Training Needs Analysis</h3><p className="text-xs mb-3" style={{ color: '#4B5563' }}>The following department criteria scored below the {BENCHMARK.toFixed(1)}/5.0 benchmark, indicating department-wide training needs:</p><div className="space-y-2">{deptTNACriteria.map((c, i) => (<div key={i} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: '#FFFFFF' }}><div className="flex items-center gap-3"><span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: '#C41E3A' }}>{i + 1}</span><span className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{c.name}</span></div><div className="flex items-center gap-3"><div className="w-24 h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#D5D8DC' }}><div className="h-full rounded-full" style={{ width: `${(c.average / 5) * 100}%`, backgroundColor: '#C41E3A' }} /></div><span className="text-sm font-bold" style={{ color: '#C41E3A' }}>{c.average.toFixed(2)}</span></div></div>))}</div><div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: '#FFFFFF', border: '1px solid #FEE2E2' }}><p className="text-xs font-semibold mb-1" style={{ color: '#C41E3A' }}>Recommended Department Actions:</p><ul className="text-xs space-y-1" style={{ color: '#4B5563' }}><li>• Schedule department-wide workshop addressing low-scoring criteria</li><li>• Review curriculum and teaching methodologies for improvement areas</li><li>• Consider peer mentoring programs between high and low performers</li></ul></div></div>)}
+
+      {/* Acknowledgment Compliance & Status */}
+      {isAdminReleased && isDeanReleased && (
+        <div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#EDEBE8' }}>
+          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: '#002366' }}>
+            <CheckCircle size={16} style={{ color: '#B87333' }} />Acknowledgment Compliance & Status
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="p-3 rounded-lg" style={{ backgroundColor: '#D1FAE5' }}>
+              <p className="text-xs font-medium" style={{ color: '#2E8B57' }}>Acknowledged</p>
+              <p className="text-2xl font-bold" style={{ color: '#2E8B57' }}>{acknowledgmentBreakdown.acknowledged}</p>
+            </div>
+            <div className="p-3 rounded-lg" style={{ backgroundColor: '#F5E6D3' }}>
+              <p className="text-xs font-medium" style={{ color: '#B87333' }}>Pending Acknowledgment</p>
+              <p className="text-2xl font-bold" style={{ color: '#B87333' }}>{acknowledgmentBreakdown.pendingAcknowledgment}</p>
+            </div>
+            <div className="p-3 rounded-lg" style={{ backgroundColor: '#FEE2E2' }}>
+              <p className="text-xs font-medium" style={{ color: '#C41E3A' }}>Disputed</p>
+              <p className="text-2xl font-bold" style={{ color: '#C41E3A' }}>{acknowledgmentBreakdown.disputed}</p>
+            </div>
+            <div className="p-3 rounded-lg" style={{ backgroundColor: '#FEF3C7' }}>
+              <p className="text-xs font-medium" style={{ color: '#B87333' }}>Pending Review</p>
+              <p className="text-2xl font-bold" style={{ color: '#B87333' }}>{acknowledgmentBreakdown.pendingReview}</p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <p className="text-xs font-semibold mb-2" style={{ color: '#002366' }}>Faculty Action Items:</p>
+            <div className="space-y-2">
+              {faculty.map(f => (
+                <div key={f.id} className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: '#F8F6F1' }}>
+                  <div>
+                    <p className="text-sm font-medium">{f.name}</p>
+                    <p className="text-xs" style={{ color: '#4B5563' }}>
+                      Status: {f.acknowledgmentStatus === 'pending_review' ? 'No action yet' : f.acknowledgmentStatus.replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleReviewFaculty(f)} className="px-3 py-1 rounded text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#002366' }}>
+                      <Eye size={12} className="inline mr-1" />Review
+                    </button>
+                    <button onClick={() => handleSendReminder(f.id)} disabled={reminderSent[f.id]} className="px-3 py-1 rounded text-xs font-medium text-white hover:opacity-90 disabled:opacity-50" style={{ backgroundColor: '#B87333' }}>
+                      <Bell size={12} className="inline mr-1" />{reminderSent[f.id] ? 'Sent!' : 'Send Reminder'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Program Completion & Feedback Themes */}
+      {isAdminReleased && isDeanReleased && (
+        <div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#EDEBE8' }}>
+          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: '#002366' }}>
+            <Target size={16} style={{ color: '#B87333' }} />Program Completion & Feedback Themes
+          </h3>
+          <div className="mb-4">
+            <p className="text-xs font-semibold mb-2" style={{ color: '#002366' }}>Program Completion Rates:</p>
+            <div className="space-y-2">
+              {programCompletionRates.map((p, i) => (
+                <div key={i} className="p-3 rounded-lg" style={{ backgroundColor: '#F8F6F1' }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">{p.program}</span>
+                    <span className="text-sm font-bold" style={{ color: p.completionRate >= 80 ? '#2E8B57' : p.completionRate >= 50 ? '#B87333' : '#C41E3A' }}>
+                      {p.completionRate}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#D5D8DC' }}>
+                    <div className="h-full rounded-full" style={{ width: `${p.completionRate}%`, backgroundColor: p.completionRate >= 80 ? '#2E8B57' : p.completionRate >= 50 ? '#B87333' : '#C41E3A' }} />
+                  </div>
+                  <p className="text-xs mt-1" style={{ color: '#4B5563' }}>
+                    {p.facultyAboveThreshold}/{p.totalFaculty} faculty met threshold, {p.totalSubmissions} total submissions
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+          {topThemes.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold mb-2" style={{ color: '#002366' }}>Top Themes ({department}):</p>
+              <div className="space-y-1">
+                {topThemes.map((theme, i) => (
+                  <div key={i} className="flex items-center gap-2 p-2 rounded" style={{ backgroundColor: '#F8F6F1' }}>
+                    <span className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: '#B87333' }}>{i + 1}</span>
+                    <span className="text-sm">{theme}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Enhanced Faculty Performance Summary with Actions */}
+      {isAdminReleased && isDeanReleased && (
+        <div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#EDEBE8' }}>
+          <h3 className="text-sm font-semibold mb-3" style={{ color: '#002366' }}>Faculty Performance Summary</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ backgroundColor: '#002366' }}>
+                  <th className="text-left px-4 py-2 text-white font-medium">Faculty</th>
+                  <th className="text-center px-4 py-2 text-white font-medium">Submissions</th>
+                  <th className="text-center px-4 py-2 text-white font-medium">Average</th>
+                  <th className="text-center px-4 py-2 text-white font-medium">Status</th>
+                  <th className="text-center px-4 py-2 text-white font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {facultyPerformance.map((f, i) => (
+                  <tr key={f.id} style={{ backgroundColor: i % 2 === 0 ? '#EDEBE8' : '#F8F6F1' }}>
+                    <td className="px-4 py-2 font-medium">{f.name}</td>
+                    <td className="px-4 py-2 text-center">{f.totalSubmissions}</td>
+                    <td className="px-4 py-2 text-center font-bold" style={{ color: f.totalSubmissions < THRESHOLD ? '#9CA3AF' : f.overallAverage >= BENCHMARK ? '#2E8B57' : '#C41E3A' }}>
+                      {f.totalSubmissions < THRESHOLD ? '—' : f.overallAverage.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: f.acknowledgmentStatus === 'acknowledged' ? '#D1FAE5' : '#F5E6D3', color: f.acknowledgmentStatus === 'acknowledged' ? '#2E8B57' : '#B87333' }}>
+                        {f.acknowledgmentStatus === 'acknowledged' ? '✓ Ack' : '⏳ Pending'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-center">
+                      <button onClick={() => handleReviewFaculty(f)} className="px-2 py-1 rounded text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#002366' }}>
+                        Review
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Course-Level Performance Table */}
+      {isAdminReleased && isDeanReleased && courseLevelPerformance.length > 0 && (
+        <div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#EDEBE8' }}>
+          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: '#002366' }}>
+            <BarChart3 size={16} style={{ color: '#B87333' }} />Course-Level Performance
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ backgroundColor: '#002366' }}>
+                  <th className="text-left px-4 py-2 text-white font-medium">Course/Subject</th>
+                  <th className="text-center px-4 py-2 text-white font-medium">Submissions</th>
+                  <th className="text-center px-4 py-2 text-white font-medium">Average</th>
+                </tr>
+              </thead>
+              <tbody>
+                {courseLevelPerformance.map((c, i) => (
+                  <tr key={c.course} style={{ backgroundColor: i % 2 === 0 ? '#EDEBE8' : '#F8F6F1' }}>
+                    <td className="px-4 py-2 font-medium">{c.course}</td>
+                    <td className="px-4 py-2 text-center">{c.submissions}</td>
+                    <td className="px-4 py-2 text-center font-bold" style={{ color: c.average >= BENCHMARK ? '#2E8B57' : '#C41E3A' }}>
+                      {c.average.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Strategic Insights & Sentiment */}
+      {isAdminReleased && isDeanReleased && (
+        <div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#EDEBE8' }}>
+          <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: '#002366' }}>
+            <Lightbulb size={16} style={{ color: '#B87333' }} />Strategic Insights & Sentiment
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <p className="text-xs font-semibold mb-2" style={{ color: '#002366' }}>Department Strengths:</p>
+              <div className="space-y-1">
+                {institutionCriteriaData.filter(c => c.score >= BENCHMARK).map((c, i) => (
+                  <div key={i} className="flex items-center justify-between p-2 rounded" style={{ backgroundColor: '#D1FAE5' }}>
+                    <span className="text-xs font-medium" style={{ color: '#2E8B57' }}>{c.name}</span>
+                    <span className="text-xs font-bold" style={{ color: '#2E8B57' }}>{c.score.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold mb-2" style={{ color: '#002366' }}>Areas for Improvement:</p>
+              {institutionCriteriaData.filter(c => c.score < BENCHMARK).length > 0 ? (
+                <div className="space-y-1">
+                  {institutionCriteriaData.filter(c => c.score < BENCHMARK).map((c, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded" style={{ backgroundColor: '#FEE2E2' }}>
+                      <span className="text-xs font-medium" style={{ color: '#C41E3A' }}>{c.name}</span>
+                      <span className="text-xs font-bold" style={{ color: '#C41E3A' }}>{c.score.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs" style={{ color: '#2E8B57' }}>✓ All criteria meet benchmark</p>
+              )}
+            </div>
+          </div>
+          <div className="p-4 rounded-lg" style={{ backgroundColor: '#F8F6F1' }}>
+            <p className="text-xs font-semibold mb-2" style={{ color: '#002366' }}>Feedback Sentiment Analysis:</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div>
+                <p className="text-xs" style={{ color: '#4B5563' }}>Total Feedback</p>
+                <p className="text-lg font-bold" style={{ color: '#002366' }}>{sentimentAnalysis.total}</p>
+              </div>
+              <div>
+                <p className="text-xs" style={{ color: '#4B5563' }}>Positive</p>
+                <p className="text-lg font-bold" style={{ color: '#2E8B57' }}>{sentimentAnalysis.positive}</p>
+              </div>
+              <div>
+                <p className="text-xs" style={{ color: '#4B5563' }}>Needs Attention</p>
+                <p className="text-lg font-bold" style={{ color: '#C41E3A' }}>{sentimentAnalysis.needsAttention}</p>
+              </div>
+              <div>
+                <p className="text-xs" style={{ color: '#4B5563' }}>Sentiment Ratio</p>
+                <p className="text-lg font-bold" style={{ color: '#B87333' }}>{sentimentRatio}%</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowReviewModal(null)} />
+          <div className="relative w-full max-w-2xl max-h-[80vh] overflow-y-auto rounded-xl shadow-2xl p-6" style={{ backgroundColor: '#EDEBE8' }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: '#002366' }}>Faculty Review: {showReviewModal.name}</h3>
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg" style={{ backgroundColor: '#F8F6F1' }}>
+                <p className="text-sm font-medium" style={{ color: '#002366' }}>Department: {showReviewModal.department}</p>
+                <p className="text-sm font-medium" style={{ color: '#002366' }}>Title: {showReviewModal.title}</p>
+                <p className="text-sm font-medium" style={{ color: '#002366' }}>Status: {showReviewModal.acknowledgmentStatus.replace(/_/g, ' ')}</p>
+              </div>
+              {(() => {
+                const metrics = store.getFacultyMetrics(showReviewModal.id, cycleId);
+                return (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-3 rounded-lg" style={{ backgroundColor: '#F8F6F1' }}>
+                        <p className="text-xs" style={{ color: '#4B5563' }}>Total Submissions</p>
+                        <p className="text-xl font-bold" style={{ color: '#002366' }}>{metrics.totalSubmissions}</p>
+                      </div>
+                      <div className="p-3 rounded-lg" style={{ backgroundColor: '#F8F6F1' }}>
+                        <p className="text-xs" style={{ color: '#4B5563' }}>Overall Average</p>
+                        <p className="text-xl font-bold" style={{ color: '#002366' }}>{metrics.overallAverage.toFixed(2)}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold mb-2" style={{ color: '#002366' }}>Criteria Performance:</p>
+                      <div className="space-y-1">
+                        {criteria.map(c => {
+                          const avg = metrics.criteriaAverages[c.id] || 0;
+                          return (
+                            <div key={c.id} className="flex items-center justify-between p-2 rounded" style={{ backgroundColor: '#F8F6F1' }}>
+                              <span className="text-xs">{c.name}</span>
+                              <span className="text-xs font-bold" style={{ color: avg >= BENCHMARK ? '#2E8B57' : '#C41E3A' }}>{avg.toFixed(2)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {metrics.feedback.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold mb-2" style={{ color: '#002366' }}>Recent Feedback:</p>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {metrics.feedback.slice(0, 5).map((fb, i) => (
+                            <div key={i} className="p-2 rounded text-xs" style={{ backgroundColor: '#F8F6F1' }}>
+                              <p className="italic">"{fb.feedback}"</p>
+                              <p className="text-[10px] mt-1" style={{ color: '#9CA3AF' }}>{fb.courseId} • {new Date(fb.submittedAt).toLocaleDateString()}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={() => setShowReviewModal(null)} className="px-4 py-2 rounded-lg text-sm font-medium text-white hover:opacity-90" style={{ backgroundColor: '#002366' }}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showDeanSignModal && (<div className="fixed inset-0 z-[100] flex items-center justify-center p-4"><div className="absolute inset-0 bg-black/50" onClick={() => setShowDeanSignModal(false)} /><div className="relative w-full max-w-lg rounded-xl shadow-2xl p-6" style={{ backgroundColor: '#EDEBE8' }}><h3 className="text-lg font-semibold mb-2" style={{ color: '#002366' }}>Dean Receipt & Release Signature</h3><p className="text-xs mb-4" style={{ color: '#4B5563' }}>By signing below, acknowledge receipt of evaluation data and authorize faculty release for the {department} department.</p><SignaturePad onSignatureChange={setDeanSignature} width={450} height={200} /><div className="flex justify-end gap-2 mt-4"><button onClick={() => setShowDeanSignModal(false)} className="px-3 py-1.5 rounded-lg text-sm border hover:bg-black/5" style={{ borderColor: '#D5D8DC' }}>Cancel</button><button onClick={handleDeanRelease} disabled={!deanSignature} className="px-4 py-1.5 rounded-lg text-sm font-medium text-white hover:opacity-90 disabled:opacity-50" style={{ backgroundColor: '#002366' }}>Sign & Release</button></div></div></div>)}
     </div>
   );
