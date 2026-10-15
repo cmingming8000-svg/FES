@@ -1,0 +1,250 @@
+export type UserRole = 'admin' | 'faculty' | 'student' | 'dean';
+
+export interface User {
+  id: string;
+  username: string;
+  password: string;
+  role: UserRole;
+  displayName: string;
+  facultyId?: string;
+  department?: string;
+}
+
+export interface SubQuestion {
+  id: string;
+  criterionId: string;
+  text: string;
+  order: number;
+}
+
+export interface Faculty {
+  id: string;
+  name: string;
+  department: string;
+  title: string;
+  courses: string[];
+  acknowledgmentStatus: 'pending_review' | 'pending_acknowledgment' | 'acknowledged';
+  acknowledgedAt?: string;
+  acknowledgedBy?: string;
+  signature?: string;
+  lastReminderSent?: string;
+}
+
+export interface Program {
+  id: string;
+  name: string;
+  department: string;
+}
+
+export interface Subject {
+  id: string;
+  code: string;
+  name: string;
+  programId: string;
+  facultyId: string;
+}
+
+export interface Student {
+  id: string;
+  name: string;
+  programId: string;
+  enrolledSubjects: string[];
+}
+
+export interface Dean {
+  id: string;
+  name: string;
+  department: string;
+}
+
+export interface EvaluationCycle {
+  id: string;
+  name: string;
+  displayName: string;
+  startDate: string;
+  endDate: string;
+  status: 'active' | 'upcoming' | 'completed' | 'archived';
+  verificationStatus?: 'pending_verification' | 'verified' | 'released';
+  verifiedAt?: string;
+  verifiedBy?: string;
+  adminRelease?: AdminRelease;
+  deanReleases?: Record<string, DeanRelease>;
+}
+
+export interface Criterion {
+  id: string;
+  name: string;
+  order: number;
+}
+
+export interface Evaluation {
+  id: string;
+  facultyId: string;
+  courseId: string;
+  cycleId: string;
+  ratings: Record<string, number>;
+  feedback: string;
+  submittedAt: string;
+  studentId?: string;
+}
+
+export interface AdminRelease {
+  released: boolean;
+  signature?: string;
+  releasedAt?: string;
+  releasedBy?: string;
+}
+
+export interface DeanRelease {
+  released: boolean;
+  signature?: string;
+  releasedAt?: string;
+  releasedBy?: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  actor: string;
+  action: string;
+  target: string;
+  details?: string;
+}
+
+export interface RateLimitEntry {
+  count: number;
+  windowStart: number;
+}
+
+export type EventType = 'criteria_changed' | 'cycle_changed' | 'submission_added' | 'data_refresh' | 'acknowledgment_changed' | 'training_changed' | 'dispute_submitted' | 'dispute_resolved' | 'verification_changed';
+
+export interface FacultyMetrics {
+  totalSubmissions: number;
+  overallAverage: number;
+  criteriaAverages: Record<string, number>;
+  subQuestionAverages: Record<string, number>;
+  scoreDistribution: number[];
+  feedback: Array<{ feedback: string; courseId: string; submittedAt: string }>;
+  courseBreakdown: Record<string, { count: number; average: number }>;
+}
+
+export interface TrainingRecommendation {
+  id: string;
+  facultyId: string;
+  cycleId: string;
+  recommendation: string;
+  generatedAt: string;
+  editedByAdmin: boolean;
+}
+
+export interface TNADeficit {
+  criterionId: string;
+  criterionName: string;
+  average: number;
+  deficit: number;
+  severity: 'critical' | 'high' | 'medium';
+  subQuestionDeficits: Array<{
+    subQuestionId: string;
+    subQuestionText: string;
+    average: number;
+    deficit: number;
+  }>;
+}
+
+export interface DepartmentTNA {
+  department: string;
+  cycleId: string;
+  generatedAt: string;
+  overallAverage: number;
+  totalSubmissions: number;
+  deficits: TNADeficit[];
+  feedbackThemes: {
+    positive: string[];
+    negative: string[];
+    sentimentRatio: number;
+  };
+  recommendations: {
+    immediate: string[];
+    shortTerm: string[];
+    longTerm: string[];
+  };
+  priorityScore: number;
+}
+
+export interface InstitutionalTNA {
+  cycleId: string;
+  generatedAt: string;
+  departments: DepartmentTNA[];
+  institutionalAverage: number;
+  totalSubmissions: number;
+  criticalDepartments: string[];
+  crossDepartmentalThemes: {
+    strengths: string[];
+    weaknesses: string[];
+  };
+  strategicRecommendations: {
+    institutionWide: string[];
+    departmentSpecific: Record<string, string[]>;
+  };
+}
+
+// Dean Analytics Types
+export interface DeanFacultyDrilldown {
+  faculty: Faculty;
+  metrics: FacultyMetrics;
+  criteriaBreakdown: Array<{
+    criterionId: string;
+    criterionName: string;
+    average: number;
+    subQuestions: Array<{
+      subQuestionId: string;
+      text: string;
+      average: number;
+    }>;
+  }>;
+  courseBreakdown: Array<{
+    courseId: string;
+    submissions: number;
+    average: number;
+  }>;
+  feedbackThemes: Array<{
+    theme: string;
+    count: number;
+    percentage: string;
+  }>;
+  acknowledgmentStatus: Faculty['acknowledgmentStatus'];
+}
+
+export interface DeanComparativeAnalytics {
+  facultyRankings: Array<{
+    facultyId: string;
+    name: string;
+    average: number;
+    submissions: number;
+    rank: number;
+    percentile: string;
+  }>;
+  departmentAverage: number;
+  institutionAverage: number;
+  difference: number;
+}
+
+export interface DeanEarlyWarning {
+  facultyId: string;
+  name: string;
+  type: string;
+  severity: 'high' | 'medium' | 'low';
+  message: string;
+}
+
+export interface DeanAcknowledgmentTracking {
+  facultyId: string;
+  name: string;
+  status: Faculty['acknowledgmentStatus'];
+  submissions: number;
+  average: number;
+  acknowledgedAt?: string;
+  daysSinceAcknowledgment: number | null;
+  needsReminder: boolean;
+}
+
