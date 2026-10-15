@@ -505,6 +505,241 @@ class DataStore {
     return cycle?.deanReleases?.[department];
   }
 
+  // Option C: Dean sees data immediately after admin release, but has 7 days to sign receipt
+  getDeanReceiptDeadline(cycleId: string | undefined, department: string): { deadline: Date; daysRemaining: number; isOverdue: boolean } | null {
+    const adminRelease = this.getCycleAdminRelease(cycleId);
+    if (!adminRelease?.released) return null;
+    
+    const deanRelease = this.getCycleDeanRelease(cycleId, department);
+    if (deanRelease?.released) return null; // Already signed
+    
+    const releaseDate = new Date(adminRelease.releasedAt!);
+    const deadline = new Date(releaseDate.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    const now = new Date();
+    const daysRemaining = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    return {
+      deadline,
+      daysRemaining: Math.max(0, daysRemaining),
+      isOverdue: daysRemaining < 0
+    };
+  }
+
+  // Enhanced Dean Analytics: Individual faculty drill-down
+  getDeanFacultyDrilldown(facultyId: string, cycleId?: string) {
+    const faculty = this.getFacultyById(facultyId);
+    if (!faculty) return null;
+    
+    const metrics = this.getFacultyMetrics(facultyId, cycleId);
+    const criteria = this.getCriteria();
+    const subQuestions = this.getSubQuestions();
+    
+    // Criteria breakdown
+    const criteriaBreakdown = criteria.map(c => ({
+      criterionId: c.id,
+      criterionName: c.name,
+      average: metrics.criteriaAverages[c.id] || 0,
+      subQuestions: subQuestions
+        .filter(sq => sq.criterionId === c.id)
+        .map(sq => ({
+          subQuestionId: sq.id,
+          text: sq.text,
+          average: metrics.subQuestionAverages[sq.id] || 0
+        }))
+    }));
+    
+    // Course breakdown
+    const courseBreakdown = Object.entries(metrics.courseBreakdown).map(([courseId, data]) => ({
+      courseId,
+      submissions: data.count,
+      average: data.average
+    }));
+    
+    // Feedback themes
+    const feedbackThemes = this.analyzeFeedbackThemes(metrics.feedback.map(f => f.feedback));
+    
+    return {
+      faculty,
+      metrics,
+      criteriaBreakdown,
+      courseBreakdown,
+      feedbackThemes,
+      acknowledgmentStatus: faculty.acknowledgmentStatus
+    };
+  }
+
+  // Comparative Analytics: Faculty ranking within department
+  getDeanComparativeAnalytics(department: string, cycleId?: string) {
+    const faculty = this.getFacultyByDepartment(department);
+    const metrics = faculty.map(f => ({
+      facultyId: f.id,
+      name: f.name,
+      average: this.getFacultyMetrics(f.id, cycleId).overallAverage,
+      submissions: this.getFacultyMetrics(f.id, cycleId).totalSubmissions
+    })).filter(m => m.submissions >= THRESHOLD);
+    
+    if (metrics.length === 0) return null;
+    
+    // Sort by average
+    const sorted = [...metrics].sort((a, b) => b.average - a.average);
+    const avgAverage = sorted.reduce((sum, m) => sum + m.average, 0) / sorted.length;
+    
+    // Calculate percentiles
+    const top25Threshold = sorted[Math.floor(sorted.length * 0.25)]?.average || 0;
+    const bottom25Threshold = sorted[Math.floor(sorted.length * 0.75)]?.average || 0;
+    
+    // Department vs institution
+    const deptMetrics = this.getDepartmentMetrics(department, cycleId);
+    const allFaculty = this.getFaculty();
+    const allMetrics = allFaculty.map(f => this.getFacultyMetrics(f.id, cycleId))
+      .filter(m => m.totalSubmissions >= THRESHOLD);
+    const institutionAverage = allMetrics.reduce((sum, m) => sum + m.overallAverage, 0) / allMetrics.length;
+    
+    return {
+      facultyRankings: sorted.map((m, i) => ({
+        ...m,
+        rank: i + 1,
+        percentile: m.average >= top25Threshold ? 'Top 25%' : m.average <= bottom25Threshold ? 'Bottom 25%' : 'Middle 50%'
+      })),
+      departmentAverage: deptMetrics.institutionAverage,
+      institutionAverage,
+      difference: deptMetrics.institutionAverage - institutionAverage
+    };
+  }
+
+  // Early Warning Indicators
+  getDeanEarlyWarnings(department: string, cycleId?: string) {
+    const faculty = this.getFacultyByDepartment(department);
+    const warnings: Array<{ facultyId: string; name: string; type: string; severity: 'high' | 'medium' | 'low'; message: string }> = [];
+    
+    faculty.forEach(f => {
+      const metrics = this.getFacultyMetrics(f.id, cycleId);
+      
+      // Low submission count
+      if (metrics.totalSubmissions < THRESHOLD && metrics.totalSubmissions > 0) {
+        warnings.push({
+          facultyId: f.id,
+          name: f.name,
+          type: 'Low Submissions',
+          severity: 'medium',
+          message: `Only ${metrics.totalSubmissions} submissions (need ${THRESHOLD})`
+        });
+      }
+      
+      // Below benchmark
+      if (metrics.totalSubmissions >= THRESHOLD && metrics.overallAverage < BENCHMARK) {
+        warnings.push({
+          facultyId: f.id,
+          name: f.name,
+          type: 'Below Benchmark',
+          severity: 'high',
+          message: `Average ${metrics.overallAverage.toFixed(2)} below ${BENCHMARK} benchmark`
+        });
+      }
+      
+      // Not acknowledged
+      if (f.acknowledgmentStatus === 'pending_review' || f.acknowledgmentStatus === 'pending_acknowledgment') {
+        warnings.push({
+          facultyId: f.id,
+          name: f.name,
+          type: 'Pending Acknowledgment',
+          severity: 'low',
+          message: `Status: ${f.acknowledgmentStatus.replace(/_/g, ' ')}`
+        });
+      }
+      
+      // Has disputes
+      const disputes = this.getDisputes().filter(d => d.facultyId === f.id && d.status === 'pending');
+      if (disputes.length > 0) {
+        warnings.push({
+          facultyId: f.id,
+          name: f.name,
+          type: 'Active Disputes',
+          severity: 'medium',
+          message: `${disputes.length} pending dispute(s)`
+        });
+      }
+    });
+    
+    return warnings.sort((a, b) => {
+      const severityOrder = { high: 0, medium: 1, low: 2 };
+      return severityOrder[a.severity] - severityOrder[b.severity];
+    });
+  }
+
+  // Student Feedback Intelligence
+  analyzeFeedbackThemes(feedback: string[]) {
+    const themes: Record<string, number> = {};
+    const keywords = {
+      'Engaging': ['engaging', 'interesting', 'captivating', 'dynamic'],
+      'Clear': ['clear', 'understandable', 'well-explained', 'organized'],
+      'Pacing': ['pacing', 'speed', 'tempo', 'fast', 'slow'],
+      'Approachable': ['approachable', 'available', 'helpful', 'accessible'],
+      'Fair': ['fair', 'reasonable', 'balanced', 'just'],
+      'Passionate': ['passionate', 'enthusiastic', 'energetic', 'dedicated'],
+      'Knowledgeable': ['knowledgeable', 'expert', 'skilled', 'competent'],
+      'Professional': ['professional', 'respectful', 'courteous', 'polite']
+    };
+    
+    feedback.forEach(fb => {
+      const lower = fb.toLowerCase();
+      Object.entries(keywords).forEach(([theme, words]) => {
+        if (words.some(word => lower.includes(word))) {
+          themes[theme] = (themes[theme] || 0) + 1;
+        }
+      });
+    });
+    
+    return Object.entries(themes)
+      .map(([theme, count]) => ({ theme, count, percentage: (count / feedback.length * 100).toFixed(1) }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }
+
+  // Administrative Oversight: Acknowledgment tracking
+  getDeanAcknowledgmentTracking(department: string, cycleId?: string) {
+    const faculty = this.getFacultyByDepartment(department);
+    
+    return faculty.map(f => {
+      const metrics = this.getFacultyMetrics(f.id, cycleId);
+      const daysSinceRelease = f.acknowledgedAt 
+        ? Math.floor((new Date().getTime() - new Date(f.acknowledgedAt).getTime()) / (1000 * 60 * 60 * 24))
+        : null;
+      
+      return {
+        facultyId: f.id,
+        name: f.name,
+        status: f.acknowledgmentStatus,
+        submissions: metrics.totalSubmissions,
+        average: metrics.overallAverage,
+        acknowledgedAt: f.acknowledgedAt,
+        daysSinceAcknowledgment: daysSinceRelease,
+        needsReminder: f.acknowledgmentStatus === 'pending_review' && metrics.totalSubmissions >= THRESHOLD
+      };
+    });
+  }
+
+  // Dispute Management
+  getDeanDisputeManagement(department: string) {
+    const faculty = this.getFacultyByDepartment(department);
+    const facultyIds = faculty.map(f => f.id);
+    
+    const disputes = this.getDisputes()
+      .filter(d => facultyIds.includes(d.facultyId))
+      .map(d => ({
+        ...d,
+        facultyName: this.getFacultyById(d.facultyId)?.name || 'Unknown'
+      }));
+    
+    return {
+      total: disputes.length,
+      pending: disputes.filter(d => d.status === 'pending').length,
+      resolved: disputes.filter(d => d.status === 'resolved').length,
+      dismissed: disputes.filter(d => d.status === 'dismissed').length,
+      disputes
+    };
+  }
+
   getCriteria(): Criterion[] { return [...this.criteria].sort((a, b) => a.order - b.order); }
   getSubQuestions(): SubQuestion[] { return [...this.subQuestions].sort((a, b) => a.order - b.order); }
   getSubQuestionsForCriterion(criterionId: string): SubQuestion[] { return this.subQuestions.filter(sq => sq.criterionId === criterionId).sort((a, b) => a.order - b.order); }

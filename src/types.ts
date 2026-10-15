@@ -200,3 +200,71 @@ export interface InstitutionalTNA {
     departmentSpecific: Record<string, string[]>;
   };
 }
+
+// Dean Analytics Types
+export interface DeanFacultyDrilldown {
+  faculty: Faculty;
+  metrics: FacultyMetrics;
+  criteriaBreakdown: Array<{
+    criterionId: string;
+    criterionName: string;
+    average: number;
+    subQuestions: Array<{
+      subQuestionId: string;
+      text: string;
+      average: number;
+    }>;
+  }>;
+  courseBreakdown: Array<{
+    courseId: string;
+    submissions: number;
+    average: number;
+  }>;
+  feedbackThemes: Array<{
+    theme: string;
+    count: number;
+    percentage: string;
+  }>;
+  acknowledgmentStatus: Faculty['acknowledgmentStatus'];
+}
+
+export interface DeanComparativeAnalytics {
+  facultyRankings: Array<{
+    facultyId: string;
+    name: string;
+    average: number;
+    submissions: number;
+    rank: number;
+    percentile: string;
+  }>;
+  departmentAverage: number;
+  institutionAverage: number;
+  difference: number;
+}
+
+export interface DeanEarlyWarning {
+  facultyId: string;
+  name: string;
+  type: string;
+  severity: 'high' | 'medium' | 'low';
+  message: string;
+}
+
+export interface DeanAcknowledgmentTracking {
+  facultyId: string;
+  name: string;
+  status: Faculty['acknowledgmentStatus'];
+  submissions: number;
+  average: number;
+  acknowledgedAt?: string;
+  daysSinceAcknowledgment: number | null;
+  needsReminder: boolean;
+}
+
+export interface DeanDisputeManagement {
+  total: number;
+  pending: number;
+  resolved: number;
+  dismissed: number;
+  disputes: Array<Dispute & { facultyName: string }>;
+}
