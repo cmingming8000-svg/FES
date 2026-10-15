@@ -5,7 +5,7 @@ import { exportFacultyReport } from '../utils/excel';
 import { exportFacultyPDF } from '../utils/pdf';
 import type { FacultyMetrics, Criterion, SubQuestion } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
-import { RefreshCw, Shield, BarChart3, MessageSquare, TrendingUp, BookOpen, ChevronDown, ChevronUp, Award, Printer, CheckCircle, AlertTriangle, Download } from 'lucide-react';
+import { RefreshCw, Shield, BarChart3, MessageSquare, TrendingUp, BookOpen, ChevronDown, ChevronUp, Award, Printer, CheckCircle, AlertTriangle, Download, FileSpreadsheet, FileText } from 'lucide-react';
 import FacultyPrintReport from '../components/FacultyPrintReport';
 import SignaturePad from '../components/SignaturePad';
 
@@ -28,6 +28,7 @@ export default function FacultyDashboard({ viewingCycleId, onViewingCycleChange 
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [disputeJustification, setDisputeJustification] = useState('');
   const [isPrintMode, setIsPrintMode] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const facultyId = user?.facultyId || 'F001';
   const faculty = store.getFacultyById(facultyId);
@@ -44,6 +45,20 @@ export default function FacultyDashboard({ viewingCycleId, onViewingCycleChange 
   }, [courseFilter, cycleId, facultyId]);
 
   useEffect(() => { loadData(); const unsubs = [store.subscribe('submission_added', loadData), store.subscribe('criteria_changed', loadData), store.subscribe('acknowledgment_changed', loadData), store.subscribe('cycle_changed', loadData)]; return () => unsubs.forEach(u => u()); }, [loadData]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('[data-export-menu]')) {
+        setShowExportMenu(false);
+      }
+    };
+    if (showExportMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showExportMenu]);
 
   const handleSignOff = async () => { if (!signature) return; await store.acknowledgeFaculty(facultyId, facultyId, signature); setShowSignModal(false); setSignature(null); };
   const handleSubmitDispute = async () => { if (!disputeJustification.trim()) return; await store.submitDispute(facultyId, cycleId || '', disputeJustification); setShowDisputeModal(false); setDisputeJustification(''); };
@@ -84,9 +99,38 @@ export default function FacultyDashboard({ viewingCycleId, onViewingCycleChange 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h2 className="text-2xl font-bold" style={{ color: '#002366' }}>{faculty?.name}</h2><p className="text-sm" style={{ color: '#4B5563' }}>{faculty?.title} • {faculty?.department}</p>{viewingCycle && <p className="text-xs mt-1" style={{ color: '#B87333' }}>Viewing: {viewingCycle.displayName}</p>}</div>
         <div className="flex items-center gap-2">
-          <button onClick={async () => await exportFacultyReport(facultyId, cycleId)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#2E8B57' }}><Download size={14} />Export Excel</button>
-          <button onClick={async () => await exportFacultyPDF(facultyId, cycleId)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#B87333' }}><Download size={14} />Export PDF</button>
-          <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:opacity-90" style={{ backgroundColor: '#D5D8DC', color: '#1A1A1A' }}><Printer size={14} />Print</button>
+          <div className="relative" data-export-menu>
+            <button onClick={() => setShowExportMenu(!showExportMenu)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#2E8B57' }}>
+              <Download size={14} />Export Reports <ChevronDown size={14} />
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg z-50" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D5D8DC' }}>
+                <div className="py-1">
+                  <button onClick={async () => { await exportFacultyReport(facultyId, cycleId); setShowExportMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50" style={{ color: '#1A1A1A' }}>
+                    <FileSpreadsheet size={16} style={{ color: '#2E8B57' }} />
+                    <div>
+                      <div className="font-medium">Export Excel Report</div>
+                      <div className="text-xs" style={{ color: '#6B7280' }}>Complete data with all sheets</div>
+                    </div>
+                  </button>
+                  <button onClick={async () => { await exportFacultyPDF(facultyId, cycleId); setShowExportMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50" style={{ color: '#1A1A1A' }}>
+                    <FileText size={16} style={{ color: '#B87333' }} />
+                    <div>
+                      <div className="font-medium">Export PDF Report</div>
+                      <div className="text-xs" style={{ color: '#6B7280' }}>Professional format with charts</div>
+                    </div>
+                  </button>
+                  <button onClick={() => { handlePrint(); setShowExportMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50" style={{ color: '#1A1A1A' }}>
+                    <Printer size={16} style={{ color: '#002366' }} />
+                    <div>
+                      <div className="font-medium">Print Report</div>
+                      <div className="text-xs" style={{ color: '#6B7280' }}>Browser print dialog</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           <button onClick={loadData} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white hover:opacity-90" style={{ backgroundColor: '#002366' }}><RefreshCw size={16} className={loading ? 'animate-spin' : ''} />Refresh</button>
         </div>
       </div>

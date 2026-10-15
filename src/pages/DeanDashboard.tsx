@@ -5,7 +5,7 @@ import { exportDeanReport } from '../utils/deanReport';
 import { exportDepartmentFacultyReport, exportDepartmentPerformancePDF } from '../utils/deanReports';
 import type { Criterion, DeanFacultyDrilldown, DeanComparativeAnalytics, DeanEarlyWarning, DeanAcknowledgmentTracking, DeanDisputeManagement } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
-import { BarChart3, Users, TrendingUp, Shield, Award, CheckCircle, Download, AlertTriangle, MessageSquare, Printer, Eye, Clock, AlertCircle, TrendingDown, XCircle } from 'lucide-react';
+import { BarChart3, Users, TrendingUp, Shield, Award, CheckCircle, Download, AlertTriangle, MessageSquare, Printer, Eye, Clock, AlertCircle, TrendingDown, XCircle, FileSpreadsheet, FileText, ChevronDown } from 'lucide-react';
 import DeanPrintReport from '../components/DeanPrintReport';
 import SignaturePad from '../components/SignaturePad';
 
@@ -38,6 +38,7 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
   
   const [showDeanSignModal, setShowDeanSignModal] = useState(false);
   const [deanSignature, setDeanSignature] = useState<string | null>(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => { 
     setCriteria(store.getCriteria()); 
@@ -69,6 +70,20 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
       setFacultyDrilldown(null);
     }
   }, [selectedFacultyId, isAdminReleased, cycleId]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('[data-export-menu]')) {
+        setShowExportMenu(false);
+      }
+    };
+    if (showExportMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showExportMenu]);
 
   const deptEvals = store.getEvaluationsForDepartment(department, cycleId);
   const facultyPerformance = faculty.map(f => { 
@@ -141,18 +156,45 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
           {viewingCycle && <p className="text-xs mt-1" style={{ color: '#B87333' }}>Viewing: {viewingCycle.displayName}</p>}
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium hover:opacity-90" style={{ backgroundColor: '#D5D8DC', color: '#1A1A1A' }}>
-            <Printer size={14} />Print Report
-          </button>
-          <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#2E8B57' }}>
-            <Download size={14} />Dept Report (Excel)
-          </button>
-          <button onClick={async () => await exportDepartmentFacultyReport(department, cycleId)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#B87333' }}>
-            <Download size={14} />Faculty Report
-          </button>
-          <button onClick={async () => await exportDepartmentPerformancePDF(department, cycleId)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#002366' }}>
-            <Download size={14} />Performance PDF
-          </button>
+          <div className="relative" data-export-menu>
+            <button onClick={() => setShowExportMenu(!showExportMenu)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#2E8B57' }}>
+              <Download size={14} />Export Reports <ChevronDown size={14} />
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-64 rounded-lg shadow-lg z-50" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D5D8DC' }}>
+                <div className="py-1">
+                  <button onClick={async () => { await handleExport(); setShowExportMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50" style={{ color: '#1A1A1A' }}>
+                    <FileSpreadsheet size={16} style={{ color: '#2E8B57' }} />
+                    <div>
+                      <div className="font-medium">Department Report (Excel)</div>
+                      <div className="text-xs" style={{ color: '#6B7280' }}>Overview with all departments</div>
+                    </div>
+                  </button>
+                  <button onClick={async () => { await exportDepartmentFacultyReport(department, cycleId); setShowExportMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50" style={{ color: '#1A1A1A' }}>
+                    <FileSpreadsheet size={16} style={{ color: '#B87333' }} />
+                    <div>
+                      <div className="font-medium">Faculty Report (Excel)</div>
+                      <div className="text-xs" style={{ color: '#6B7280' }}>Detailed faculty metrics</div>
+                    </div>
+                  </button>
+                  <button onClick={async () => { await exportDepartmentPerformancePDF(department, cycleId); setShowExportMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50" style={{ color: '#1A1A1A' }}>
+                    <FileText size={16} style={{ color: '#002366' }} />
+                    <div>
+                      <div className="font-medium">Performance Summary (PDF)</div>
+                      <div className="text-xs" style={{ color: '#6B7280' }}>Professional format with charts</div>
+                    </div>
+                  </button>
+                  <button onClick={() => { handlePrint(); setShowExportMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50" style={{ color: '#1A1A1A' }}>
+                    <Printer size={16} style={{ color: '#6B7280' }} />
+                    <div>
+                      <div className="font-medium">Print Report</div>
+                      <div className="text-xs" style={{ color: '#6B7280' }}>Browser print dialog</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

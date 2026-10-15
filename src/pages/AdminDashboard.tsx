@@ -7,7 +7,7 @@ import { exportFacultyPerformanceSummary, exportCycleCompletionPDF } from '../ut
 import ConfirmDialog from '../components/ConfirmDialog';
 import type { Faculty, EvaluationCycle, Criterion, AuditLogEntry, SubQuestion, TrainingRecommendation, Dispute } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, ReferenceLine } from 'recharts';
-import { LayoutDashboard, Users, Calendar, ListChecks, ScrollText, Plus, Trash2, Search, AlertTriangle, CheckCircle, TrendingUp, Shield, FileSpreadsheet, GraduationCap, Edit3, Sparkles, Download, BarChart3, MessageSquare, BookOpen, Printer, UserPlus } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, ListChecks, ScrollText, Plus, Trash2, Search, AlertTriangle, CheckCircle, TrendingUp, Shield, FileSpreadsheet, GraduationCap, Edit3, Sparkles, Download, BarChart3, MessageSquare, BookOpen, Printer, UserPlus, FileText, ChevronDown } from 'lucide-react';
 import AdminPrintReport from '../components/AdminPrintReport';
 import FacultyPrintReport from '../components/FacultyPrintReport';
 import SignaturePad from '../components/SignaturePad';
@@ -45,12 +45,27 @@ export default function AdminDashboard({ viewingCycleId, onViewingCycleChange }:
   const [isPrintMode, setIsPrintMode] = useState(false);
   const [showAdminSignModal, setShowAdminSignModal] = useState(false);
   const [adminSignature, setAdminSignature] = useState<string | null>(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const activeCycle = cycles.find(c => c.status === 'active');
   const cycleId = viewingCycleId || activeCycle?.id;
 
   const loadData = useCallback(() => { setFaculty(store.getFaculty()); setCycles(store.getCycles()); setCriteria(store.getCriteria()); setAuditLog(store.getAuditLog()); setTrainingRecs(store.getTrainingRecommendations()); setDisputes(store.getDisputes()); }, []);
   useEffect(() => { loadData(); const unsubs = [store.subscribe('criteria_changed', loadData), store.subscribe('cycle_changed', loadData), store.subscribe('submission_added', loadData), store.subscribe('acknowledgment_changed', loadData), store.subscribe('training_changed', loadData), store.subscribe('dispute_submitted', loadData), store.subscribe('dispute_resolved', loadData)]; return () => unsubs.forEach(u => u()); }, [loadData]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('[data-export-menu]')) {
+        setShowExportMenu(false);
+      }
+    };
+    if (showExportMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [showExportMenu]);
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [{ id: 'overview', label: 'Overview', icon: <LayoutDashboard size={16} /> }, { id: 'faculty', label: 'Faculty', icon: <Users size={16} /> }, { id: 'cycles', label: 'Cycles', icon: <Calendar size={16} /> }, { id: 'criteria', label: 'Criteria', icon: <ListChecks size={16} /> }, { id: 'tna', label: 'TNA', icon: <GraduationCap size={16} /> }, { id: 'disputes', label: 'Disputes', icon: <AlertTriangle size={16} /> }, { id: 'audit', label: 'Audit Log', icon: <ScrollText size={16} /> }];
 
@@ -85,7 +100,43 @@ export default function AdminDashboard({ viewingCycleId, onViewingCycleChange }:
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-2">
         <div className="flex gap-1 p-1 rounded-xl overflow-x-auto flex-1" style={{ backgroundColor: '#EDEBE8' }}>{tabs.map(tab => (<button key={tab.id} onClick={() => { setActiveTab(tab.id); setSelectedFaculty(null); }} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap" style={{ backgroundColor: activeTab === tab.id ? '#002366' : 'transparent', color: activeTab === tab.id ? '#FFFFFF' : '#1A1A1A' }}>{tab.icon}{tab.label}</button>))}</div>
-        <div className="flex gap-2 flex-wrap">{!isAdminReleased && activeCycle && (<button onClick={() => setShowAdminSignModal(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:opacity-90" style={{ backgroundColor: '#B87333', color: '#FFFFFF' }}><Shield size={14} />Release Data</button>)}{isAdminReleased && (<div className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: '#D1FAE5', color: '#2E8B57' }}><CheckCircle size={14} />Released {adminReleaseInfo?.releasedAt ? new Date(adminReleaseInfo.releasedAt).toLocaleDateString() : ''}</div>)}<button onClick={() => navigate('/create-account')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:opacity-90" style={{ backgroundColor: '#2E8B57', color: '#FFFFFF' }}><UserPlus size={14} />Create Account</button><button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:opacity-90" style={{ backgroundColor: '#D5D8DC', color: '#1A1A1A' }}><Printer size={14} />Print Report</button><button onClick={async () => await exportFacultyPerformanceSummary(cycleId)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:opacity-90" style={{ backgroundColor: '#002366', color: '#FFFFFF' }}><Download size={14} />Faculty Summary</button><button onClick={async () => await exportCycleCompletionPDF(cycleId)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:opacity-90" style={{ backgroundColor: '#C41E3A', color: '#FFFFFF' }}><Download size={14} />Cycle Report</button></div>
+        <div className="flex gap-2 flex-wrap">
+          {!isAdminReleased && activeCycle && (<button onClick={() => setShowAdminSignModal(true)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:opacity-90" style={{ backgroundColor: '#B87333', color: '#FFFFFF' }}><Shield size={14} />Release Data</button>)}
+          {isAdminReleased && (<div className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium" style={{ backgroundColor: '#D1FAE5', color: '#2E8B57' }}><CheckCircle size={14} />Released {adminReleaseInfo?.releasedAt ? new Date(adminReleaseInfo.releasedAt).toLocaleDateString() : ''}</div>)}
+          <button onClick={() => navigate('/create-account')} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:opacity-90" style={{ backgroundColor: '#2E8B57', color: '#FFFFFF' }}><UserPlus size={14} />Create Account</button>
+          <div className="relative" data-export-menu>
+            <button onClick={() => setShowExportMenu(!showExportMenu)} className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium hover:opacity-90" style={{ backgroundColor: '#002366', color: '#FFFFFF' }}>
+              <Download size={14} />Export Reports <ChevronDown size={14} />
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-64 rounded-lg shadow-lg z-50" style={{ backgroundColor: '#FFFFFF', border: '1px solid #D5D8DC' }}>
+                <div className="py-1">
+                  <button onClick={async () => { await exportFacultyPerformanceSummary(cycleId); setShowExportMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50" style={{ color: '#1A1A1A' }}>
+                    <FileSpreadsheet size={16} style={{ color: '#002366' }} />
+                    <div>
+                      <div className="font-medium">Faculty Summary (Excel)</div>
+                      <div className="text-xs" style={{ color: '#6B7280' }}>All faculty with compliance tracking</div>
+                    </div>
+                  </button>
+                  <button onClick={async () => { await exportCycleCompletionPDF(cycleId); setShowExportMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50" style={{ color: '#1A1A1A' }}>
+                    <FileText size={16} style={{ color: '#C41E3A' }} />
+                    <div>
+                      <div className="font-medium">Cycle Completion (PDF)</div>
+                      <div className="text-xs" style={{ color: '#6B7280' }}>Department breakdown & compliance</div>
+                    </div>
+                  </button>
+                  <button onClick={() => { handlePrint(); setShowExportMenu(false); }} className="w-full flex items-center gap-2 px-4 py-2 text-sm text-left hover:bg-gray-50" style={{ color: '#1A1A1A' }}>
+                    <Printer size={16} style={{ color: '#6B7280' }} />
+                    <div>
+                      <div className="font-medium">Print Report</div>
+                      <div className="text-xs" style={{ color: '#6B7280' }}>Browser print dialog</div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
       {activeTab === 'overview' && !selectedFaculty && (<div className="space-y-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
