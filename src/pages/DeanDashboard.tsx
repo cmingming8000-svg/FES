@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { store, BENCHMARK, THRESHOLD } from '../store';
 import { useAuth } from '../auth';
 import { exportDeanReport } from '../utils/deanReport';
+import { exportDepartmentFacultyReport, exportDepartmentPerformancePDF } from '../utils/deanReports';
 import type { Criterion, DeanFacultyDrilldown, DeanComparativeAnalytics, DeanEarlyWarning, DeanAcknowledgmentTracking, DeanDisputeManagement } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
 import { BarChart3, Users, TrendingUp, Shield, Award, CheckCircle, Download, AlertTriangle, MessageSquare, Printer, Eye, Clock, AlertCircle, TrendingDown, XCircle } from 'lucide-react';
@@ -144,7 +145,13 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
             <Printer size={14} />Print Report
           </button>
           <button onClick={handleExport} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#2E8B57' }}>
-            <Download size={14} />Export Report
+            <Download size={14} />Dept Report (Excel)
+          </button>
+          <button onClick={async () => await exportDepartmentFacultyReport(department, cycleId)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#B87333' }}>
+            <Download size={14} />Faculty Report
+          </button>
+          <button onClick={async () => await exportDepartmentPerformancePDF(department, cycleId)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white hover:opacity-90" style={{ backgroundColor: '#002366' }}>
+            <Download size={14} />Performance PDF
           </button>
         </div>
       </div>

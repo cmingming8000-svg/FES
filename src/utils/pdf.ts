@@ -316,6 +316,105 @@ export async function exportFacultyPDF(facultyId: string, cycleId?: string): Pro
       });
     }
 
+    // ===== DEPARTMENT COMPARISON =====
+    yPos += 5;
+    addSectionHeader('Department Comparison');
+    
+    const deptMetrics = store.getDepartmentMetrics(faculty.department, effectiveCycleId);
+    const allFaculty = store.getFacultyByDepartment(faculty.department);
+    const allFacultyMetrics = allFaculty.map(f => ({
+      name: f.name,
+      average: store.getFacultyMetrics(f.id, effectiveCycleId).overallAverage,
+      submissions: store.getFacultyMetrics(f.id, effectiveCycleId).totalSubmissions
+    })).filter(f => f.submissions > 0);
+    
+    const sortedFaculty = [...allFacultyMetrics].sort((a, b) => b.average - a.average);
+    const rank = sortedFaculty.findIndex(f => f.name === faculty.name) + 1;
+    const percentile = allFacultyMetrics.length > 0 ? Math.round((1 - (rank - 1) / allFacultyMetrics.length) * 100) : 0;
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Department: ${faculty.department}`, margin + 2, yPos);
+    yPos += 5;
+    doc.text(`Department Average: ${deptMetrics.institutionAverage.toFixed(2)}/5.0`, margin + 2, yPos);
+    yPos += 5;
+    doc.text(`Your Average: ${metrics.overallAverage.toFixed(2)}/5.0`, margin + 2, yPos);
+    yPos += 5;
+    
+    const difference = metrics.overallAverage - deptMetrics.institutionAverage;
+    doc.text(`Difference: ${difference >= 0 ? '+' : ''}${difference.toFixed(2)}`, margin + 2, yPos);
+    if (difference >= 0) {
+      doc.setTextColor(46, 139, 87);
+    } else {
+      doc.setTextColor(196, 30, 58);
+    }
+    doc.text(`(${difference >= 0 ? 'Above' : 'Below'} Department Average)`, margin + 60, yPos);
+    doc.setTextColor(0, 0, 0);
+    yPos += 5;
+    
+    doc.text(`Anonymous Ranking: Top ${100 - percentile}% of department`, margin + 2, yPos);
+    yPos += 8;
+
+    // ===== PROFESSIONAL DEVELOPMENT RECOMMENDATIONS =====
+    yPos += 5;
+    addSectionHeader('Professional Development Recommendations');
+    
+    // Identify strengths and areas for improvement
+    const strengths = criteria.filter(c => (metrics.criteriaAverages[c.id] || 0) >= 4.0);
+    const improvements = criteria.filter(c => {
+      const avg = metrics.criteriaAverages[c.id] || 0;
+      return avg > 0 && avg < BENCHMARK;
+    });
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(46, 139, 87);
+    doc.text('Strengths:', margin + 2, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    yPos += 5;
+    
+    if (strengths.length > 0) {
+      strengths.forEach(c => {
+        checkPageBreak(5);
+        const avg = metrics.criteriaAverages[c.id] || 0;
+        doc.text(`• ${c.name} (${avg.toFixed(2)}/5.0)`, margin + 5, yPos);
+        yPos += 5;
+      });
+    } else {
+      doc.text('• Continue maintaining high standards across all criteria', margin + 5, yPos);
+      yPos += 5;
+    }
+    
+    yPos += 3;
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(196, 30, 58);
+    doc.text('Areas for Improvement:', margin + 2, yPos);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    yPos += 5;
+    
+    if (improvements.length > 0) {
+      improvements.forEach(c => {
+        checkPageBreak(5);
+        const avg = metrics.criteriaAverages[c.id] || 0;
+        doc.text(`• ${c.name} (${avg.toFixed(2)}/5.0) - Consider targeted professional development`, margin + 5, yPos);
+        yPos += 5;
+      });
+    } else {
+      doc.text('• All criteria meet or exceed benchmark - excellent performance', margin + 5, yPos);
+      yPos += 5;
+    }
+    
+    yPos += 5;
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Recommendation: Schedule a meeting with your Dean to discuss these results and create a', margin + 2, yPos);
+    yPos += 4;
+    doc.text('personalized professional development plan for the next evaluation cycle.', margin + 2, yPos);
+    doc.setTextColor(0, 0, 0);
+
     // ===== FOOTER =====
     yPos += 5;
     checkPageBreak(15);

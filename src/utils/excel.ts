@@ -397,6 +397,184 @@ export async function exportFacultyReport(facultyId: string, cycleId?: string): 
     summarySheet.autoFilter = { from: 'A1', to: `C${metrics.scoreDistribution.length + 3}` };
 
     // ============================
+    // SHEET 6: DEPARTMENT COMPARISON
+    // ============================
+    const deptSheet = workbook.addWorksheet('Department Comparison');
+    deptSheet.columns = [
+      { width: 35 },  // Metric
+      { width: 20 },  // Value
+    ];
+
+    deptSheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+    const deptHeaders = ['Metric', 'Value'];
+    deptSheet.getRow(1).values = deptHeaders;
+    deptSheet.getRow(1).eachCell(cell => {
+      cell.fill = headerFill;
+      cell.font = headerFont;
+      cell.border = borderStyle;
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    const deptComparisonMetrics = store.getDepartmentMetrics(faculty.department, effectiveCycleId);
+    const allFaculty = store.getFacultyByDepartment(faculty.department);
+    const allFacultyMetrics = allFaculty.map(f => ({
+      name: f.name,
+      average: store.getFacultyMetrics(f.id, effectiveCycleId).overallAverage,
+      submissions: store.getFacultyMetrics(f.id, effectiveCycleId).totalSubmissions
+    })).filter(f => f.submissions > 0);
+    
+    const sortedFaculty = [...allFacultyMetrics].sort((a, b) => b.average - a.average);
+    const rank = sortedFaculty.findIndex(f => f.name === faculty.name) + 1;
+    const percentile = allFacultyMetrics.length > 0 ? Math.round((1 - (rank - 1) / allFacultyMetrics.length) * 100) : 0;
+    const difference = metrics.overallAverage - deptComparisonMetrics.institutionAverage;
+
+    const deptRows: [string, string | number][] = [
+      ['Department', faculty.department],
+      ['Your Average', metrics.overallAverage.toFixed(2)],
+      ['Department Average', deptComparisonMetrics.institutionAverage.toFixed(2)],
+      ['Difference', `${difference >= 0 ? '+' : ''}${difference.toFixed(2)}`],
+      ['Anonymous Ranking', `Top ${100 - percentile}% of department`],
+      ['Total Faculty in Department', allFaculty.length],
+      ['Faculty with Evaluations', allFacultyMetrics.length],
+    ];
+
+    deptRows.forEach((row, i) => {
+      const r = deptSheet.getRow(i + 2);
+      r.values = row;
+      r.eachCell(cell => {
+        cell.border = borderStyle;
+        cell.font = { size: 10 };
+      });
+      r.getCell(1).font = { size: 10, bold: true };
+    });
+
+    deptSheet.autoFilter = { from: 'A1', to: `B${deptRows.length + 1}` };
+
+    // ============================
+    // SHEET 7: PROFESSIONAL DEVELOPMENT
+    // ============================
+    const devSheet = workbook.addWorksheet('Professional Development');
+    devSheet.columns = [
+      { width: 30 },  // Category
+      { width: 50 },  // Recommendation
+    ];
+
+    devSheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+    const devHeaders = ['Category', 'Recommendation'];
+    devSheet.getRow(1).values = devHeaders;
+    devSheet.getRow(1).eachCell(cell => {
+      cell.fill = headerFill;
+      cell.font = headerFont;
+      cell.border = borderStyle;
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    // Identify strengths and areas for improvement
+    const strengths = criteria.filter(c => (metrics.criteriaAverages[c.id] || 0) >= 4.0);
+    const improvements = criteria.filter(c => {
+      const avg = metrics.criteriaAverages[c.id] || 0;
+      return avg > 0 && avg < BENCHMARK;
+    });
+
+    let devRow = 2;
+    
+    // Strengths section
+    const strengthHeader = devSheet.getRow(devRow);
+    strengthHeader.values = ['STRENGTHS', ''];
+    strengthHeader.eachCell(cell => {
+      cell.border = borderStyle;
+      cell.font = { size: 10, bold: true, color: { argb: GREEN } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } };
+    });
+    devRow++;
+
+    if (strengths.length > 0) {
+      strengths.forEach(c => {
+        const avg = metrics.criteriaAverages[c.id] || 0;
+        const r = devSheet.getRow(devRow);
+        r.values = [c.name, `Score: ${avg.toFixed(2)}/5.0 - Continue maintaining high standards`];
+        r.eachCell(cell => {
+          cell.border = borderStyle;
+          cell.font = { size: 10 };
+        });
+        devRow++;
+      });
+    } else {
+      const r = devSheet.getRow(devRow);
+      r.values = ['General', 'Continue maintaining high standards across all criteria'];
+      r.eachCell(cell => {
+        cell.border = borderStyle;
+        cell.font = { size: 10 };
+      });
+      devRow++;
+    }
+
+    // Areas for improvement section
+    devRow++;
+    const improvementHeader = devSheet.getRow(devRow);
+    improvementHeader.values = ['AREAS FOR IMPROVEMENT', ''];
+    improvementHeader.eachCell(cell => {
+      cell.border = borderStyle;
+      cell.font = { size: 10, bold: true, color: { argb: RED } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+    });
+    devRow++;
+
+    if (improvements.length > 0) {
+      improvements.forEach(c => {
+        const avg = metrics.criteriaAverages[c.id] || 0;
+        const r = devSheet.getRow(devRow);
+        r.values = [c.name, `Score: ${avg.toFixed(2)}/5.0 - Consider targeted professional development`];
+        r.eachCell(cell => {
+          cell.border = borderStyle;
+          cell.font = { size: 10 };
+        });
+        devRow++;
+      });
+    } else {
+      const r = devSheet.getRow(devRow);
+      r.values = ['General', 'All criteria meet or exceed benchmark - excellent performance'];
+      r.eachCell(cell => {
+        cell.border = borderStyle;
+        cell.font = { size: 10 };
+      });
+      devRow++;
+    }
+
+    // Recommendations section
+    devRow++;
+    const recHeader = devSheet.getRow(devRow);
+    recHeader.values = ['NEXT STEPS', ''];
+    recHeader.eachCell(cell => {
+      cell.border = borderStyle;
+      cell.font = { size: 10, bold: true, color: { argb: ROYAL_BLUE } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDBEAFE' } };
+    });
+    devRow++;
+
+    const recommendations = [
+      'Schedule a meeting with your Dean to discuss these results',
+      'Create a personalized professional development plan for next cycle',
+      'Consider peer observation or mentoring opportunities',
+      'Review student feedback themes for actionable insights',
+      'Set specific, measurable goals for improvement areas'
+    ];
+
+    recommendations.forEach(rec => {
+      const r = devSheet.getRow(devRow);
+      r.values = ['Action Item', rec];
+      r.eachCell(cell => {
+        cell.border = borderStyle;
+        cell.font = { size: 10 };
+      });
+      devRow++;
+    });
+
+    devSheet.autoFilter = { from: 'A1', to: `B${devRow - 1}` };
+    
+    // ============================
     // SAVE AND DOWNLOAD
     // ============================
     const buffer = await workbook.xlsx.writeBuffer();
