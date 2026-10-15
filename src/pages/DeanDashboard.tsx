@@ -3,7 +3,7 @@ import { store, BENCHMARK, THRESHOLD } from '../store';
 import { useAuth } from '../auth';
 import { exportDeanReport } from '../utils/deanReport';
 import { exportDepartmentFacultyReport, exportDepartmentPerformancePDF } from '../utils/deanReports';
-import type { Criterion, DeanFacultyDrilldown, DeanComparativeAnalytics, DeanEarlyWarning, DeanAcknowledgmentTracking, DeanDisputeManagement } from '../types';
+import type { Criterion, DeanFacultyDrilldown, DeanComparativeAnalytics, DeanEarlyWarning, DeanAcknowledgmentTracking } from '../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ReferenceLine, PieChart, Pie } from 'recharts';
 import { BarChart3, Users, TrendingUp, Shield, Award, CheckCircle, Download, AlertTriangle, MessageSquare, Printer, Eye, Clock, AlertCircle, TrendingDown, XCircle, FileSpreadsheet, FileText, ChevronDown } from 'lucide-react';
 import DeanPrintReport from '../components/DeanPrintReport';
@@ -23,7 +23,6 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
   const [comparativeAnalytics, setComparativeAnalytics] = useState<DeanComparativeAnalytics | null>(null);
   const [earlyWarnings, setEarlyWarnings] = useState<DeanEarlyWarning[]>([]);
   const [acknowledgmentTracking, setAcknowledgmentTracking] = useState<DeanAcknowledgmentTracking[]>([]);
-  const [disputeManagement, setDisputeManagement] = useState<DeanDisputeManagement | null>(null);
   
   const activeCycle = store.getActiveCycle();
   const cycleId = viewingCycleId || activeCycle?.id;
@@ -57,7 +56,6 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
       setComparativeAnalytics(store.getDeanComparativeAnalytics(department, cycleId));
       setEarlyWarnings(store.getDeanEarlyWarnings(department, cycleId));
       setAcknowledgmentTracking(store.getDeanAcknowledgmentTracking(department, cycleId));
-      setDisputeManagement(store.getDeanDisputeManagement(department));
     }
   }, [isAdminReleased, department, cycleId]);
 
@@ -236,7 +234,6 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
             <ul className="text-xs space-y-1" style={{ color: '#4B5563' }}>
               <li>• I acknowledge receipt of the evaluation data for the {department} department.</li>
               <li>• I confirm the data has been reviewed for accuracy at the department aggregate level.</li>
-              <li>• I understand that faculty may file disputes regarding their evaluation results.</li>
             </ul>
           </div>
           <button onClick={() => setShowDeanSignModal(true)} className="px-4 py-2 rounded-lg text-sm font-medium text-white hover:opacity-90" style={{ backgroundColor: '#002366' }}>
@@ -572,29 +569,6 @@ export default function DeanDashboard({ viewingCycleId, onViewingCycleChange }: 
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
-      )}
-
-      {/* Dispute Management */}
-      {isAdminReleased && disputeManagement && disputeManagement.total > 0 && (
-        <div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#EDEBE8' }}>
-          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: '#002366' }}>
-            <AlertCircle size={16} style={{ color: '#B87333' }} />Dispute Management
-          </h3>
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="p-3 rounded-lg" style={{ backgroundColor: '#FEE2E2' }}>
-              <p className="text-xs" style={{ color: '#4B5563' }}>Pending</p>
-              <p className="text-xl font-bold" style={{ color: '#C41E3A' }}>{disputeManagement.pending}</p>
-            </div>
-            <div className="p-3 rounded-lg" style={{ backgroundColor: '#D1FAE5' }}>
-              <p className="text-xs" style={{ color: '#4B5563' }}>Resolved</p>
-              <p className="text-xl font-bold" style={{ color: '#2E8B57' }}>{disputeManagement.resolved}</p>
-            </div>
-            <div className="p-3 rounded-lg" style={{ backgroundColor: '#F5E6D3' }}>
-              <p className="text-xs" style={{ color: '#4B5563' }}>Dismissed</p>
-              <p className="text-xl font-bold" style={{ color: '#B87333' }}>{disputeManagement.dismissed}</p>
-            </div>
           </div>
         </div>
       )}
