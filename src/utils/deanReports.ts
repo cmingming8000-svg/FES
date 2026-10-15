@@ -108,8 +108,6 @@ export async function exportDepartmentFacultyReport(department: string, cycleId?
       // Color code acknowledgment status
       if (f.acknowledgmentStatus === 'acknowledged') {
         r.getCell(6).font = { size: 10, color: { argb: GREEN } };
-      } else if (f.acknowledgmentStatus === 'disputed') {
-        r.getCell(6).font = { size: 10, color: { argb: RED } };
       } else {
         r.getCell(6).font = { size: 10, color: { argb: COPPER } };
       }

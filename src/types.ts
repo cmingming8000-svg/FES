@@ -23,11 +23,10 @@ export interface Faculty {
   department: string;
   title: string;
   courses: string[];
-  acknowledgmentStatus: 'pending_review' | 'pending_acknowledgment' | 'acknowledged' | 'disputed';
+  acknowledgmentStatus: 'pending_review' | 'pending_acknowledgment' | 'acknowledged';
   acknowledgedAt?: string;
   acknowledgedBy?: string;
   signature?: string;
-  disputeId?: string;
   lastReminderSent?: string;
 }
 
@@ -136,18 +135,6 @@ export interface TrainingRecommendation {
   recommendation: string;
   generatedAt: string;
   editedByAdmin: boolean;
-}
-
-export interface Dispute {
-  id: string;
-  facultyId: string;
-  cycleId: string;
-  submittedAt: string;
-  justification: string;
-  status: 'pending' | 'resolved' | 'dismissed';
-  resolvedAt?: string;
-  resolvedBy?: string;
-  resolution?: string;
 }
 
 export interface TNADeficit {
@@ -261,10 +248,3 @@ export interface DeanAcknowledgmentTracking {
   needsReminder: boolean;
 }
 
-export interface DeanDisputeManagement {
-  total: number;
-  pending: number;
-  resolved: number;
-  dismissed: number;
-  disputes: Array<Dispute & { facultyName: string }>;
-}

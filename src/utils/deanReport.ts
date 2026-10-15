@@ -162,8 +162,6 @@ export async function exportDeanReport(department: string, cycleId?: string): Pr
       // Color code acknowledgment status
       if (f.acknowledgmentStatus === 'acknowledged') {
         r.getCell(5).font = { size: 10, color: { argb: GREEN } };
-      } else if (f.acknowledgmentStatus === 'disputed') {
-        r.getCell(5).font = { size: 10, color: { argb: RED } };
       } else {
         r.getCell(5).font = { size: 10, color: { argb: COPPER } };
       }

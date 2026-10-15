@@ -111,8 +111,6 @@ export async function exportFacultyPerformanceSummary(cycleId?: string): Promise
       // Color code acknowledgment status
       if (f.acknowledgmentStatus === 'acknowledged') {
         r.getCell(7).font = { size: 10, color: { argb: GREEN } };
-      } else if (f.acknowledgmentStatus === 'disputed') {
-        r.getCell(7).font = { size: 10, color: { argb: RED } };
       } else {
         r.getCell(7).font = { size: 10, color: { argb: COPPER } };
       }

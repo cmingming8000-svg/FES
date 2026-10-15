@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import type { User, Faculty, Student, Dean, EvaluationCycle, Criterion, SubQuestion, Evaluation, AuditLogEntry, RateLimitEntry, FacultyMetrics, EventType, TrainingRecommendation, Dispute, Program, Subject, AdminRelease, DeanRelease } from './types';
+import type { User, Faculty, Student, Dean, EvaluationCycle, Criterion, SubQuestion, Evaluation, AuditLogEntry, RateLimitEntry, FacultyMetrics, EventType, TrainingRecommendation, Program, Subject, AdminRelease, DeanRelease } from './types';
 import { saveToLocalStorage, loadFromLocalStorage } from './utils/persistence';
 
 const BENCHMARK = 3.0;
@@ -188,7 +188,6 @@ class DataStore {
   private listeners: Map<EventType, Set<() => void>> = new Map();
   private studentSessionEvals: Map<string, Set<string>> = new Map();
   private trainingRecommendations: TrainingRecommendation[] = [];
-  private disputes: Dispute[] = [];
   private users: User[] = [
     { id: 'admin', username: 'admin', password: 'admin', role: 'admin', displayName: 'System Administrator' },
     { id: 'test_admin', username: 'test_admin', password: 'test123', role: 'admin', displayName: 'TEST Administrator' },
@@ -218,7 +217,6 @@ class DataStore {
       this.evaluations = persistedData.evaluations || this.evaluations;
       this.auditLog = persistedData.auditLog || this.auditLog;
       this.trainingRecommendations = persistedData.trainingRecommendations || this.trainingRecommendations;
-      this.disputes = persistedData.disputes || this.disputes;
       this.addAuditLog('system', 'data_restored', 'DataStore', 'Data restored from localStorage');
     } else {
       this.addAuditLog('system', 'system_init', 'DataStore', `System initialized — Faculty: ${FACULTY_SEED.length}, Students: ${STUDENTS_SEED.length}, Deans: ${DEANS_SEED.length}, Cycles: ${CYCLES_SEED.length}, Criteria: ${CRITERIA_SEED.length}, Sub-Questions: ${SUB_QUESTIONS.length}, Seed Evaluations: ${this.evaluations.length}`);
@@ -240,7 +238,6 @@ class DataStore {
       evaluations: this.evaluations,
       auditLog: this.auditLog,
       trainingRecommendations: this.trainingRecommendations,
-      disputes: this.disputes,
     });
   }
 
@@ -293,68 +290,6 @@ class DataStore {
     this.emit('acknowledgment_changed');
   }
 
-  getDisputes(): Dispute[] { return [...this.disputes]; }
-  getPendingDisputes(): Dispute[] { return this.disputes.filter(d => d.status === 'pending'); }
-
-  async submitDispute(facultyId: string, cycleId: string, justification: string): Promise<Dispute> {
-    await this.simulateLatency();
-    const faculty = this.getFacultyById(facultyId);
-    if (!faculty) throw new Error('Faculty not found');
-    const dispute: Dispute = {
-      id: uuidv4(),
-      facultyId,
-      cycleId,
-      submittedAt: new Date().toISOString(),
-      justification,
-      status: 'pending',
-    };
-    this.disputes.push(dispute);
-    faculty.acknowledgmentStatus = 'disputed';
-    faculty.disputeId = dispute.id;
-    this.addAuditLog(`faculty:${facultyId}`, 'dispute_submitted', facultyId, `Dispute submitted`);
-    this.persistData();
-    this.emit('dispute_submitted');
-    this.emit('acknowledgment_changed');
-    return dispute;
-  }
-
-  async resolveDispute(disputeId: string, resolvedBy: string, resolution: string): Promise<void> {
-    await this.simulateLatency();
-    const dispute = this.disputes.find(d => d.id === disputeId);
-    if (!dispute) throw new Error('Dispute not found');
-    dispute.status = 'resolved';
-    dispute.resolvedAt = new Date().toISOString();
-    dispute.resolvedBy = resolvedBy;
-    dispute.resolution = resolution;
-    const faculty = this.getFacultyById(dispute.facultyId);
-    if (faculty) {
-      faculty.acknowledgmentStatus = 'pending_acknowledgment';
-      faculty.disputeId = undefined;
-    }
-    this.addAuditLog(`admin:${resolvedBy}`, 'dispute_resolved', disputeId, `Dispute resolved`);
-    this.persistData();
-    this.emit('dispute_resolved');
-    this.emit('acknowledgment_changed');
-  }
-
-  async dismissDispute(disputeId: string, resolvedBy: string, reason: string): Promise<void> {
-    await this.simulateLatency();
-    const dispute = this.disputes.find(d => d.id === disputeId);
-    if (!dispute) throw new Error('Dispute not found');
-    dispute.status = 'dismissed';
-    dispute.resolvedAt = new Date().toISOString();
-    dispute.resolvedBy = resolvedBy;
-    dispute.resolution = `Dismissed: ${reason}`;
-    const faculty = this.getFacultyById(dispute.facultyId);
-    if (faculty) {
-      faculty.acknowledgmentStatus = 'pending_acknowledgment';
-      faculty.disputeId = undefined;
-    }
-    this.addAuditLog(`admin:${resolvedBy}`, 'dispute_dismissed', disputeId, `Dispute dismissed`);
-    this.persistData();
-    this.emit('dispute_resolved');
-    this.emit('acknowledgment_changed');
-  }
 
   async sendReminder(facultyId: string): Promise<void> {
     await this.simulateLatency();
@@ -367,42 +302,6 @@ class DataStore {
   }
 
   getTrainingRecommendations(): TrainingRecommendation[] { return [...this.trainingRecommendations]; }
-  getTrainingRecommendationForFaculty(facultyId: string, cycleId?: string): TrainingRecommendation | undefined {
-    return this.trainingRecommendations.find(r => r.facultyId === facultyId && r.cycleId === (cycleId || this.getActiveCycle()?.id));
-  }
-
-  async generateTrainingRecommendation(facultyId: string, cycleId?: string): Promise<TrainingRecommendation> {
-    await this.simulateLatency();
-    const faculty = this.getFacultyById(facultyId);
-    if (!faculty) throw new Error('Faculty not found');
-    const effectiveCycleId = cycleId || this.getActiveCycle()?.id || '';
-    const metrics = this.getFacultyMetrics(facultyId, effectiveCycleId);
-    const criteria = this.getCriteria();
-    const lowCriteria = criteria.map(c => ({ name: c.name, avg: metrics.criteriaAverages[c.id] || 0 })).filter(c => c.avg < BENCHMARK && c.avg > 0);
-    const recommendation = lowCriteria.length > 0
-      ? `Based on evaluation data, the following areas scored below the ${BENCHMARK}/5.0 benchmark:\n\n${lowCriteria.map(c => `- ${c.name}: ${c.avg.toFixed(2)}/5.0`).join('\n')}\n\nRecommended actions:\n- Schedule a meeting with department head\n- Consider peer observation sessions\n- Review teaching materials and methods`
-      : 'No areas below benchmark identified. Continue current teaching practices.';
-    this.trainingRecommendations = this.trainingRecommendations.filter(r => !(r.facultyId === facultyId && r.cycleId === effectiveCycleId));
-    const newRec: TrainingRecommendation = { id: uuidv4(), facultyId, cycleId: effectiveCycleId, recommendation, generatedAt: new Date().toISOString(), editedByAdmin: false };
-    this.trainingRecommendations.push(newRec);
-    this.addAuditLog('admin:ai', 'tna_generated', facultyId, `TNA generated for ${faculty.name}`);
-    this.persistData();
-    this.emit('training_changed');
-    return newRec;
-  }
-
-  async updateTrainingRecommendation(recId: string, newRec: string): Promise<void> {
-    await this.simulateLatency();
-    const rec = this.trainingRecommendations.find(r => r.id === recId);
-    if (rec) { rec.recommendation = newRec; rec.editedByAdmin = true; this.persistData(); this.emit('training_changed'); }
-  }
-
-  async deleteTrainingRecommendation(recId: string): Promise<void> {
-    await this.simulateLatency();
-    this.trainingRecommendations = this.trainingRecommendations.filter(r => r.id !== recId);
-    this.persistData();
-    this.emit('training_changed');
-  }
 
   getCycles(): EvaluationCycle[] { return JSON.parse(JSON.stringify(this.cycles)); }
   getActiveCycle(): EvaluationCycle | undefined { return this.cycles.find(c => c.status === 'active'); }
@@ -647,18 +546,6 @@ class DataStore {
           message: `Status: ${f.acknowledgmentStatus.replace(/_/g, ' ')}`
         });
       }
-      
-      // Has disputes
-      const disputes = this.getDisputes().filter(d => d.facultyId === f.id && d.status === 'pending');
-      if (disputes.length > 0) {
-        warnings.push({
-          facultyId: f.id,
-          name: f.name,
-          type: 'Active Disputes',
-          severity: 'medium',
-          message: `${disputes.length} pending dispute(s)`
-        });
-      }
     });
     
     return warnings.sort((a, b) => {
@@ -717,27 +604,6 @@ class DataStore {
         needsReminder: f.acknowledgmentStatus === 'pending_review' && metrics.totalSubmissions >= THRESHOLD
       };
     });
-  }
-
-  // Dispute Management
-  getDeanDisputeManagement(department: string) {
-    const faculty = this.getFacultyByDepartment(department);
-    const facultyIds = faculty.map(f => f.id);
-    
-    const disputes = this.getDisputes()
-      .filter(d => facultyIds.includes(d.facultyId))
-      .map(d => ({
-        ...d,
-        facultyName: this.getFacultyById(d.facultyId)?.name || 'Unknown'
-      }));
-    
-    return {
-      total: disputes.length,
-      pending: disputes.filter(d => d.status === 'pending').length,
-      resolved: disputes.filter(d => d.status === 'resolved').length,
-      dismissed: disputes.filter(d => d.status === 'dismissed').length,
-      disputes
-    };
   }
 
   getCriteria(): Criterion[] { return [...this.criteria].sort((a, b) => a.order - b.order); }
@@ -837,7 +703,7 @@ class DataStore {
     if (fac && fac.acknowledgmentStatus === 'acknowledged') { fac.acknowledgmentStatus = 'pending_acknowledgment'; this.emit('acknowledgment_changed'); }
     const vals = Object.values(evalData.ratings);
     const avg = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-    this.addAuditLog('student:anonymous', 'submission', evalData.facultyId, `Faculty: "${fac?.name}", Course: ${evalData.courseId}, Avg: ${avg.toFixed(2)}/5`);
+    this.addAuditLog('student:identified', 'submission', evalData.facultyId, `Student ID: ${studentId || 'N/A'}, Faculty: "${fac?.name}", Course: ${evalData.courseId}, Avg: ${avg.toFixed(2)}/5`);
     this.persistData();
     this.emit('submission_added');
     return evaluation;
@@ -993,7 +859,6 @@ class DataStore {
     this.evaluations = generateSeedEvaluations();
     this.auditLog = [];
     this.trainingRecommendations = [];
-    this.disputes = [];
     this.studentSessionEvals.clear();
     this.addAuditLog('admin', 'data_reset', 'DataStore', 'All data reset to seed values');
     this.persistData();
@@ -1004,7 +869,7 @@ class DataStore {
     return {
       faculty: this.faculty, students: this.students, deans: this.deans, cycles: this.cycles,
       criteria: this.criteria, subQuestions: this.subQuestions, evaluations: this.evaluations,
-      auditLog: this.auditLog, trainingRecommendations: this.trainingRecommendations, disputes: this.disputes,
+      auditLog: this.auditLog, trainingRecommendations: this.trainingRecommendations,
     };
   }
 
@@ -1018,7 +883,6 @@ class DataStore {
     if (data.evaluations) this.evaluations = data.evaluations;
     if (data.auditLog) this.auditLog = data.auditLog;
     if (data.trainingRecommendations) this.trainingRecommendations = data.trainingRecommendations;
-    if (data.disputes) this.disputes = data.disputes;
     this.addAuditLog('admin', 'data_imported', 'DataStore', 'Data imported');
     this.persistData();
     this.emit('data_refresh');

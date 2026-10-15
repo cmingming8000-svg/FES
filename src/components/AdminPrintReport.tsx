@@ -12,7 +12,6 @@ export default function AdminPrintReport({ cycleName, criteria }: AdminPrintRepo
   const totalEvaluations = store.getEvaluations().filter(e => e.cycleId === cycleId).length;
   const acknowledged = faculty.filter(f => f.acknowledgmentStatus === 'acknowledged').length;
   const pendingAck = faculty.filter(f => f.acknowledgmentStatus === 'pending_acknowledgment').length;
-  const disputed = faculty.filter(f => f.acknowledgmentStatus === 'disputed').length;
   const pendingReview = faculty.filter(f => f.acknowledgmentStatus === 'pending_review').length;
   const departments = ['Computer Science', 'Mathematics', 'Physics'];
   const deptData = departments.map(dept => {
@@ -28,8 +27,6 @@ export default function AdminPrintReport({ cycleName, criteria }: AdminPrintRepo
     return { name: c.name, avg: count > 0 ? total / count : 0 };
   });
   const flaggedFaculty = faculty.filter(f => { const metrics = store.getFacultyMetrics(f.id, cycleId); return metrics.totalSubmissions >= THRESHOLD && metrics.overallAverage < BENCHMARK; });
-  const disputes = store.getDisputes();
-  const pendingDisputes = disputes.filter(d => d.status === 'pending');
 
   const styles = {
     page: { fontFamily: 'Georgia, serif', color: '#1A1A1A', lineHeight: 1.6, padding: '0', maxWidth: '8.5in', margin: '0 auto', backgroundColor: 'white' },
